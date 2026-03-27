@@ -1,148 +1,87 @@
+from PyQt6 import QtWidgets
 import sys
-import serial
-import serial.tools.list_ports
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QComboBox,
-                             QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QFileDialog)
-import time
-from PyQt6.QtCore import QThread, pyqtSignal
+import win32com.client as win32
+from pathlib import Path
+import os
 
-class MainWindow(QMainWindow):
+class GUI(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
-        self.serial_conn = None
-        self.output_file = None
+        self.init_UI()
 
-        self.setWindowTitle("PUF Binary Capture Tool (Qt6)")
-        self.setGeometry(100, 100, 400, 300)
+    def init_UI(self):
+        self.setWindowTitle("Clean Data - Converter")
+        self.resize(400, 100)
 
-        # --- UI LAYOUT ---
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
+        self.btn = QtWidgets.QPushButton("Select file")
+        self.btn.clicked.connect(self.pick)
 
-        # 1. COM Port Selection
-        hbox_com = QHBoxLayout()
-        self.com_label = QLabel("COM Port:")
-        self.com_combo = QComboBox()
-        self.refresh_btn = QPushButton("Refresh")
-        self.refresh_btn.clicked.connect(self.refresh_com_ports)
-        hbox_com.addWidget(self.com_label)
-        hbox_com.addWidget(self.com_combo)
-        hbox_com.addWidget(self.refresh_btn)
-        main_layout.addLayout(hbox_com)
+        self.output_box = QtWidgets.QTextEdit()
+        self.output_box.setReadOnly(True)
+        self.output_box.setPlaceholderText("Start the Conversion.....")
 
-        # 2. Baud Rate Selection
-        hbox_baud = QHBoxLayout()
-        self.baud_label = QLabel("Baud Rate:")
-        self.baud_combo = QComboBox()
-        self.baud_combo.addItems(["9600","115200"])
-        self.baud_combo.setCurrentText("115200")  # Default
-        hbox_baud.addWidget(self.baud_label)
-        hbox_baud.addWidget(self.baud_combo)
-        main_layout.addLayout(hbox_baud)
+        # Layout: button on top, output below
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(self.btn)
+        layout.addWidget(self.output_box)
 
-        # 3. Connection Buttons
-        hbox_conn = QHBoxLayout()
-        self.connect_btn = QPushButton("Connect")
-        self.connect_btn.clicked.connect(self.connect_to_fpga)
-        self.disconnect_btn = QPushButton("Disconnect")
-        self.disconnect_btn.clicked.connect(self.disconnect_from_fpga)
-        self.disconnect_btn.setEnabled(False)
-        hbox_conn.addWidget(self.connect_btn)
-        hbox_conn.addWidget(self.disconnect_btn)
-        main_layout.addLayout(hbox_conn)
+        self.setLayout(layout)
 
-
-        # Added File Section
-        hbox_file = QHBoxLayout()
-        self.file_label = QLabel("Output File:")
-        self.file_path_display = QLabel("No file selected") # Using Label instead of Edit for safety
-        self.file_path_display.setStyleSheet("border: 1px solid gray; padding: 2px;")
-        self.browse_btn = QPushButton("Browse...")
-        self.browse_btn.clicked.connect(self.select_file) # Logic to be added later
-
-        hbox_file.addWidget(self.file_label)
-        hbox_file.addWidget(self.file_path_display)
-        hbox_file.addWidget(self.browse_btn)
-        main_layout.addLayout(hbox_file)
-
-        # Added Capture Control
-        hbox_capture = QHBoxLayout()
-        self.start_btn = QPushButton("Capture")
-        self.start_btn.setEnabled(False)
-
-        self.stop_btn = QPushButton("Stop")
-        self.stop_btn.setEnabled(False)
-
-        hbox_capture.addWidget(self.start_btn)
-        hbox_capture.addWidget(self.stop_btn)
-        main_layout.addLayout(hbox_capture)
-
-        # 5. Status Label
-        self.status_label = QLabel("Status: Disconnected")
-        main_layout.addWidget(self.status_label)
-
-        # Initialize ports
-        self.refresh_com_ports()
-
-    # --- LOGIC ---
-
-    def refresh_com_ports(self):
-        ports = [port.device for port in serial.tools.list_ports.comports()]
-        self.com_combo.clear()
-        self.com_combo.addItems(ports if ports else ["No ports found"])
-
-    def connect_to_fpga(self):
-        baud = int(self.baud_combo.currentText())
-        com = self.com_combo.currentText()
-        try:
-            # timeout=0 makes read() non-blocking
-            self.serial_conn = serial.Serial(com, baud, timeout=0)
-            self.serial_conn.reset_input_buffer()
-
-            self.status_label.setText(f"Status: Connected to {com}")
-            self.connect_btn.setEnabled(False)
-            self.disconnect_btn.setEnabled(True)
-            self.start_btn.setEnabled(True)
-            self.com_combo.setEnabled(False)
-            self.baud_combo.setEnabled(False)
-
-        except Exception as e:
-            QMessageBox.critical(self, "Connection Error", str(e))
-
-    def disconnect_from_fpga(self):
-        if self.serial_conn and self.serial_conn.is_open:
-            # self.stop_capture()  # Ensure we stop before closing
-            self.serial_conn.close()
-        self.serial_conn = None
-
-        self.status_label.setText("Status: Disconnected")
-        self.connect_btn.setEnabled(True)
-        self.disconnect_btn.setEnabled(False)
-        self.start_btn.setEnabled(False)
-        self.stop_btn.setEnabled(False)
-        self.com_combo.setEnabled(True)
-        self.baud_combo.setEnabled(True)
-
-    def select_file(self):
-        # Open a "Save As" dialog
-        # Returns a tuple: (filename, filter_used)
-        file_path, _ = QFileDialog.getSaveFileName(
+    def pick(self):
+        # File dialog
+        filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(
             self,
-            "Save Capture As",
+            "Select PUF Response Files",  # Updated dialog title
             "",
-            "Binary Files (*.bin, *.txt);;All Files (*)"
+            "Text files (*.txt *.csv);;All files (*.*)",
         )
+        if not filenames:
+            return
 
-        if file_path:
-            self.output_file = file_path
-            self.file_path_display.setText(file_path)
-            # Optional: Print to console for debugging
-            print(f"File selected: {self.output_file}")
+        for filename in filenames:
+            file_path = Path(filename)
+
+            # Create Output Path
+            output_filename = f"{file_path.stem}_Clean{file_path.suffix}"
+            output_path = file_path.with_name(output_filename)
+
+            print(f"Processing: {file_path.name} -> {output_path.name}")
+
+            # File Reading and Data Cleaning
+            # Open and read the file content
+            with open(file_path, "rb") as file:
+                raw_data = file.read()
+
+            clean_data = raw_data.rstrip(b'\r\n')
+
+            # Convert
+            with open(output_path, "w") as file_out:
+                total_len = len(clean_data)
+
+                for i in range(0, total_len, 16):
+                    # Grab 16 bytes (or whatever is left)
+                    chunk = clean_data[i : i + 16]
+
+                    # Convert bytes to "11111111" strings
+                    binary_list = [format(byte, '08b') for byte in chunk]
+
+                    # Join with spaces
+                    line_string = " ".join(binary_list)
+
+                    # Write to file
+                    file_out.write(line_string + "\n")
+        self.output_box.clear()
+        self.output_box.append("All selected files have been cleaned.")
+        print("All selected files have been cleaned.")
+
+
+def main():
+    app = QtWidgets.QApplication(sys.argv)
+    w = GUI()
+    w.show()
+    # w.create_Excel() # Test Here
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
+    main()
