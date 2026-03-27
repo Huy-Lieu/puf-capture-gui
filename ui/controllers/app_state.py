@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from RealTermNaming import get_ldist_case_ids_ordered, get_ldist_case_label
+from RealTermNaming import R1_INIT_PAIR_SUFFIXES, get_ldist_case_ids_ordered, get_ldist_case_label
 from ui.views.capture_form import CaptureForm
 
 
@@ -22,9 +22,10 @@ class AppDefaults:
     auto_delay: str = "5"
     flipflop_position: str = "DFF"
     mdist_value: str = "8"
-    loop_ff_only: bool = True
+    loop_ff_only: bool = False
     loop_mdist_only: bool = False
     loop_ldist_only: bool = False
+    loop_initial_values: bool = False
 
 
 def apply_defaults(form: CaptureForm, defaults: AppDefaults | None = None) -> None:
@@ -43,5 +44,8 @@ def apply_defaults(form: CaptureForm, defaults: AppDefaults | None = None) -> No
     form.var_mdist_value.set(d.mdist_value)
     form.var_loop_ff_only.set(d.loop_ff_only)
     form.var_loop_mdist_only.set(d.loop_mdist_only)
+    form.var_r1_loop_all_pairs.set(d.loop_initial_values)
     form.var_ldist_case.set(get_ldist_case_label(get_ldist_case_ids_ordered()[0]))
     form.var_loop_ldist_only.set(d.loop_ldist_only)
+    form.var_r1_pair_suffix.set(R1_INIT_PAIR_SUFFIXES[0])
+

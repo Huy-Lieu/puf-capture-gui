@@ -6,7 +6,7 @@ from typing import Callable, Iterator, Optional
 
 import pythoncom
 
-from capture_planners import iter_ff_mux_jobs, iter_reliability_jobs
+from capture_planners import iter_ff_mux_jobs, iter_r1_init_jobs, iter_reliability_jobs
 from RealTermClient import RealTermClient, connect_realterm
 from RealTermNaming import build_capture_filename
 from RealTermTypes import RealTermConfig
@@ -95,6 +95,8 @@ def run_capture(
         stop = should_stop or (lambda: False)
         if cfg.file_naming_mode == "scheme3":
             jobs = iter_ff_mux_jobs(cfg)
+        elif cfg.file_naming_mode == "scheme4":
+            jobs = iter_r1_init_jobs(cfg)
         else:
             jobs = iter_reliability_jobs(cfg)
 

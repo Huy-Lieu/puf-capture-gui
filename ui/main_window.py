@@ -16,7 +16,7 @@ class RealTermControllerApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("RealTerm Controller")
-        self.geometry("760x520")
+        self.geometry("820x540")
         self.minsize(720, 480)
 
         self._msg_q: queue.Queue[str] = queue.Queue()
@@ -97,9 +97,10 @@ class RealTermControllerApp(tk.Tk):
 
 def main() -> None:
     app = RealTermControllerApp()
+
+    app.form.var_fpga_index.trace_add("write", lambda *_: app.preview.update_filename_preview())
     for var in (
         app.form.var_file_naming_mode,
-        app.form.var_fpga_index,
         app.form.var_end_fpga_index,
         app.form.var_base_name,
         app.form.var_start_index,
@@ -107,6 +108,8 @@ def main() -> None:
         app.form.var_flipflop_position,
         app.form.var_mux_pair,
         app.form.var_ldist_case,
+        app.form.var_r1_pair_suffix,
+        app.form.var_r1_loop_all_pairs,
     ):
         var.trace_add("write", lambda *_: app.preview.update_filename_preview())
     app.form.var_loop_ff_only.trace_add(

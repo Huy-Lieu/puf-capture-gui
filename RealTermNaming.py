@@ -14,6 +14,22 @@ MDIST_CASES: dict[int, tuple[tuple[int, int], ...]] = {
     2: ((3, 4),),
 }
 
+# Canonical order for CFF R1 init-values (scheme4); last entry includes a literal '*' in the stem.
+R1_INIT_PAIR_SUFFIXES: tuple[str, ...] = (
+    "1111_AAAA",
+    "AAAA_1111",
+    "2222_5555",
+    "5555_2222",
+    "4444_8888",
+    "8888_4444",
+    "4444_AAAA",
+    "AAAA_4444",
+    "5555_8888",
+    "8888_5555",
+    "AAAA_5555",
+    "5555_AAAA*",
+)
+
 LDIST_CASES: dict[int, tuple[str, str, int]] = {
     1: ("DLUTA", "ALUTB", 6),
     2: ("DLUTA", "BLUTB", 5),
@@ -37,6 +53,11 @@ def _normalize_scheme1_base(base_name: str, fpga_index: int) -> str:
 
 
 def build_capture_filename(cfg: RealTermConfig, capture_index: int) -> str:
+    if cfg.file_naming_mode == "scheme4":
+        return (
+            f"FPGA{cfg.fpga_index}_LDIST6_DLUTA_ALUTB_MDIST8_M0_M7_CFF_R1_"
+            f"{cfg.r1_pair_suffix}{cfg.extension}"
+        )
     if cfg.file_naming_mode == "scheme3":
         base_clean = cfg.base_name.strip().strip("_")
         base_clean = re.sub(r"^FPGA\d+_?", "", base_clean, flags=re.IGNORECASE)
