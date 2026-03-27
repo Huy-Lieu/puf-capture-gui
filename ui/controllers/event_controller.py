@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
@@ -27,6 +28,8 @@ class EventController:
         self._log = log
         self._worker = worker
         self._com_label_to_port: dict[str, str] = {}
+        self._vivado_proc = None
+        self._vivado_thread: threading.Thread | None = None
 
     @property
     def com_label_to_port(self) -> dict[str, str]:
@@ -34,6 +37,24 @@ class EventController:
 
     def append_status(self, msg: str) -> None:
         self._log.append(msg)
+
+    def _append_status_threadsafe(self, msg: str) -> None:
+        self._log.text.after(0, lambda: self.append_status(msg))
+
+    def _set_vivado_running(self, running: bool) -> None:
+        self._controls.btn_run_vivado.configure(state=tk.DISABLED if running else tk.NORMAL)
+
+    def _stream_vivado_output(self, process, tcl: Path) -> None:
+        if process.stdout is not None:
+            for line in process.stdout:
+                text = line.rstrip()
+                if text:
+                    self._append_status_threadsafe(f"[Vivado] {text}")
+        exit_code = process.wait()
+        self._vivado_proc = None
+        self._vivado_thread = None
+        self._log.text.after(0, lambda: self._set_vivado_running(False))
+        self._append_status_threadsafe(f"Vivado finished for {tcl.name} (exit code {exit_code}).")
 
     def set_running(self, running: bool) -> None:
         self._controls.btn_start.configure(state=tk.DISABLED if running else tk.NORMAL)
@@ -71,6 +92,10 @@ class EventController:
             self._form.var_vivado_tcl_path.set(path)
 
     def run_vivado_tcl(self) -> None:
+        if self._vivado_proc is not None and self._vivado_proc.poll() is None:
+            self.append_status("Vivado run already in progress.")
+            return
+
         vivado_bat = self._form.var_vivado_bat_path.get().strip()
         project_path = self._form.var_vivado_project_path.get().strip()
         tcl_path = self._form.var_vivado_tcl_path.get().strip()
@@ -107,7 +132,7 @@ class EventController:
             return
 
         try:
-            start_vivado_batch(
+            process = start_vivado_batch(
                 VivadoRunConfig(
                     vivado_bat_path=str(bat),
                     project_path=str(project),
@@ -118,7 +143,15 @@ class EventController:
             messagebox.showerror("Vivado launch failed", str(exc))
             return
 
+        self._vivado_proc = process
+        self._set_vivado_running(True)
         self.append_status(f"Vivado started with TCL: {tcl}")
+        self._vivado_thread = threading.Thread(
+            target=self._stream_vivado_output,
+            args=(process, tcl),
+            daemon=True,
+        )
+        self._vivado_thread.start()
 
     def refresh_com_ports(self) -> None:
         ports, mapping = detect_com_ports()

@@ -25,4 +25,10 @@ def build_vivado_command(cfg: VivadoRunConfig) -> list[str]:
 
 def start_vivado_batch(cfg: VivadoRunConfig) -> subprocess.Popen:
     cmd = build_vivado_command(cfg)
-    return subprocess.Popen(cmd)
+    return subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )

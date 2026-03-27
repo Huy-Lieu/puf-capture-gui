@@ -46,7 +46,11 @@ class VivadoRunnerTests(unittest.TestCase):
                 "run.tcl",
                 "-tclargs",
                 "design.xpr",
-            ]
+            ],
+            stdout=-1,
+            stderr=-2,
+            text=True,
+            bufsize=1,
         )
 
 
