@@ -19,6 +19,9 @@ class AppDefaults:
     save_dir: str = (
         r"D:\All_SelfLearning\Prj\1_\PUF_Experimental_Results\Full_Test\InitialValues\Test\Raw"
     )
+    vivado_bat_path: str = ""
+    vivado_project_path: str = ""
+    vivado_tcl_path: str = ""
     auto_delay: str = "5"
     flipflop_position: str = "DFF"
     mdist_value: str = "8"
@@ -39,6 +42,9 @@ def apply_defaults(form: CaptureForm, defaults: AppDefaults | None = None) -> No
     form.var_com_port.set(d.com_port)
     form.var_baud.set(d.baud)
     form.var_save_dir.set(d.save_dir)
+    form.var_vivado_bat_path.set(d.vivado_bat_path)
+    form.var_vivado_project_path.set(d.vivado_project_path)
+    form.var_vivado_tcl_path.set(d.vivado_tcl_path)
     form.var_auto_delay.set(d.auto_delay)
     form.var_flipflop_position.set(d.flipflop_position)
     form.var_mdist_value.set(d.mdist_value)

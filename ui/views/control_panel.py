@@ -11,6 +11,7 @@ class ControlPanelWidgets:
     btn_start: ttk.Button
     btn_stop: ttk.Button
     btn_capture: ttk.Button
+    btn_run_vivado: ttk.Button
     lbl_state: ttk.Label
 
 
@@ -20,6 +21,7 @@ def build_control_panel(
     on_connect: Callable[[], None],
     on_disconnect: Callable[[], None],
     on_capture: Callable[[], None],
+    on_run_vivado: Callable[[], None],
 ) -> ControlPanelWidgets:
     btns = ttk.Frame(parent)
     btns.grid(row=0, column=0, sticky="ew")
@@ -37,14 +39,18 @@ def build_control_panel(
     btn_capture = ttk.Button(parent, text="Capture", command=on_capture, state=tk.DISABLED)
     btn_capture.grid(row=1, column=0, sticky="ew", pady=(10, 0))
 
-    ttk.Separator(parent).grid(row=2, column=0, sticky="ew", pady=12)
+    btn_run_vivado = ttk.Button(parent, text="Run Vivado TCL", command=on_run_vivado)
+    btn_run_vivado.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+
+    ttk.Separator(parent).grid(row=3, column=0, sticky="ew", pady=12)
 
     lbl_state = ttk.Label(parent, text="Idle")
-    lbl_state.grid(row=3, column=0, sticky="w")
+    lbl_state.grid(row=4, column=0, sticky="w")
 
     return ControlPanelWidgets(
         btn_start=btn_start,
         btn_stop=btn_stop,
         btn_capture=btn_capture,
+        btn_run_vivado=btn_run_vivado,
         lbl_state=lbl_state,
     )

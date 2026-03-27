@@ -55,12 +55,16 @@ class RealTermControllerApp(tk.Tk):
             on_naming_mode_changed=lambda: self.preview.apply_naming_mode_ui(),
             on_refresh_com_ports=lambda: self.events.refresh_com_ports(),
             on_browse_dir=lambda: self.events.browse_dir(),
+            on_browse_vivado_bat=lambda: self.events.browse_vivado_bat(),
+            on_browse_vivado_project=lambda: self.events.browse_vivado_project(),
+            on_browse_vivado_tcl=lambda: self.events.browse_vivado_tcl(),
         )
         self.controls = build_control_panel(
             ctrl_frame,
             on_connect=lambda: self.events.connect(),
             on_disconnect=lambda: self.events.disconnect(),
             on_capture=lambda: self.events.capture_now(),
+            on_run_vivado=lambda: self.events.run_vivado_tcl(),
         )
         self.log = StatusLog(log_frame)
         self.preview = PreviewController(self.form)

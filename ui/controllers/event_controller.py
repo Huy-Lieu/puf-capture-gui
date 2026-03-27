@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from ui.services.config_mapper import parse_realterm_config
 from ui.services.port_service import detect_com_ports
+from ui.services.vivado_runner import VivadoRunConfig, start_vivado_batch
 from ui.services.capture_worker import CaptureWorker
 from ui.views.capture_form import CaptureForm
 from ui.views.control_panel import ControlPanelWidgets
@@ -43,6 +45,80 @@ class EventController:
         path = filedialog.askdirectory(title="Select save directory")
         if path:
             self._form.var_save_dir.set(path)
+
+    def browse_vivado_bat(self) -> None:
+        path = filedialog.askopenfilename(
+            title="Select Vivado batch file",
+            filetypes=(("Batch files", "*.bat"), ("All files", "*.*")),
+        )
+        if path:
+            self._form.var_vivado_bat_path.set(path)
+
+    def browse_vivado_project(self) -> None:
+        path = filedialog.askopenfilename(
+            title="Select Vivado project file",
+            filetypes=(("Vivado projects", "*.xpr"), ("All files", "*.*")),
+        )
+        if path:
+            self._form.var_vivado_project_path.set(path)
+
+    def browse_vivado_tcl(self) -> None:
+        path = filedialog.askopenfilename(
+            title="Select TCL script file",
+            filetypes=(("TCL files", "*.tcl"), ("All files", "*.*")),
+        )
+        if path:
+            self._form.var_vivado_tcl_path.set(path)
+
+    def run_vivado_tcl(self) -> None:
+        vivado_bat = self._form.var_vivado_bat_path.get().strip()
+        project_path = self._form.var_vivado_project_path.get().strip()
+        tcl_path = self._form.var_vivado_tcl_path.get().strip()
+
+        if not vivado_bat or not project_path or not tcl_path:
+            messagebox.showerror(
+                "Missing Vivado paths",
+                "Please select Vivado bat path, project (.xpr), and TCL script path.",
+            )
+            return
+
+        bat = Path(vivado_bat)
+        project = Path(project_path)
+        tcl = Path(tcl_path)
+        if bat.suffix.lower() != ".bat":
+            messagebox.showerror("Invalid Vivado path", "Vivado path must point to a .bat file.")
+            return
+        if project.suffix.lower() != ".xpr":
+            messagebox.showerror(
+                "Invalid project file", "Vivado project path must point to a .xpr file."
+            )
+            return
+        if tcl.suffix.lower() != ".tcl":
+            messagebox.showerror("Invalid TCL file", "TCL path must point to a .tcl file.")
+            return
+        if not bat.is_file():
+            messagebox.showerror("Missing file", f"Vivado batch file not found:\n{bat}")
+            return
+        if not project.is_file():
+            messagebox.showerror("Missing file", f"Vivado project file not found:\n{project}")
+            return
+        if not tcl.is_file():
+            messagebox.showerror("Missing file", f"TCL file not found:\n{tcl}")
+            return
+
+        try:
+            start_vivado_batch(
+                VivadoRunConfig(
+                    vivado_bat_path=str(bat),
+                    project_path=str(project),
+                    tcl_path=str(tcl),
+                )
+            )
+        except OSError as exc:
+            messagebox.showerror("Vivado launch failed", str(exc))
+            return
+
+        self.append_status(f"Vivado started with TCL: {tcl}")
 
     def refresh_com_ports(self) -> None:
         ports, mapping = detect_com_ports()
