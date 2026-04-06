@@ -10,13 +10,14 @@ from ui.services.capture_worker import CaptureWorker
 from ui.views.capture_form import CaptureForm, build_capture_form
 from ui.views.control_panel import ControlPanelWidgets, build_control_panel
 from ui.views.status_log import StatusLog
+from ui.views.vivado_config import build_vivado_configuration
 
 
 class RealTermControllerApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("RealTerm Controller")
-        self.geometry("820x540")
+        self.title("PUF GUI")
+        self.geometry("1000x800")
         self.minsize(720, 480)
 
         self._msg_q: queue.Queue[str] = queue.Queue()
@@ -39,32 +40,34 @@ class RealTermControllerApp(tk.Tk):
         root.columnconfigure(1, weight=1)
 
         cfg_frame = ttk.LabelFrame(root, text="Capture Configuration", padding=10)
-        cfg_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 8))
+        cfg_frame.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=(0, 8), pady=(0, 8))
         cfg_frame.columnconfigure(1, weight=1)
 
         ctrl_frame = ttk.LabelFrame(root, text="Control", padding=10)
         ctrl_frame.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=(0, 8))
         ctrl_frame.columnconfigure(0, weight=1)
 
+        vivado_frame = ttk.LabelFrame(root, text="Vivado Configuration", padding=10)
+        vivado_frame.grid(row=1, column=1, sticky="nsew", padx=(8, 0), pady=(0, 8))
+        vivado_frame.columnconfigure(1, weight=1)
+
         log_frame = ttk.LabelFrame(root, text="Status", padding=10)
-        log_frame.grid(row=1, column=0, columnspan=2, sticky="nsew")
-        root.rowconfigure(1, weight=1)
+        log_frame.grid(row=2, column=0, columnspan=2, sticky="nsew")
+        root.rowconfigure(0, weight=0)
+        root.rowconfigure(1, weight=0)
+        root.rowconfigure(2, weight=1)
 
         self.form = build_capture_form(
             cfg_frame,
             on_naming_mode_changed=lambda: self.preview.apply_naming_mode_ui(),
             on_refresh_com_ports=lambda: self.events.refresh_com_ports(),
             on_browse_dir=lambda: self.events.browse_dir(),
-            on_browse_vivado_bat=lambda: self.events.browse_vivado_bat(),
-            on_browse_vivado_project=lambda: self.events.browse_vivado_project(),
-            on_browse_vivado_tcl=lambda: self.events.browse_vivado_tcl(),
         )
         self.controls = build_control_panel(
             ctrl_frame,
             on_connect=lambda: self.events.connect(),
             on_disconnect=lambda: self.events.disconnect(),
             on_capture=lambda: self.events.capture_now(),
-            on_run_vivado=lambda: self.events.run_vivado_tcl(),
         )
         self.log = StatusLog(log_frame)
         self.preview = PreviewController(self.form)
@@ -74,6 +77,18 @@ class RealTermControllerApp(tk.Tk):
             log=self.log,
             worker=self._worker,
         )
+        vivado_panel = build_vivado_configuration(
+            vivado_frame,
+            self.form,
+            on_browse_bat=self.events.browse_vivado_bat,
+            on_browse_project=self.events.browse_vivado_project,
+            on_browse_tcl_bitstream=self.events.browse_vivado_tcl_bitstream,
+            on_browse_bitstream_program=self.events.browse_vivado_bitstream_program,
+            on_browse_tcl_program=self.events.browse_vivado_tcl_program,
+            on_run_bitstream=self.events.run_vivado_generate_bitstream,
+            on_run_program=self.events.run_vivado_program_device,
+        )
+        self.events.bind_vivado_panel(vivado_panel)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _append(self, msg: str) -> None:

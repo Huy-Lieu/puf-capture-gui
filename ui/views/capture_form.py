@@ -21,7 +21,9 @@ class CaptureForm:
     var_save_dir: tk.StringVar
     var_vivado_bat_path: tk.StringVar
     var_vivado_project_path: tk.StringVar
-    var_vivado_tcl_path: tk.StringVar
+    var_vivado_tcl_bitstream: tk.StringVar
+    var_vivado_bitstream_program: tk.StringVar
+    var_vivado_tcl_program: tk.StringVar
     var_auto_delay: tk.StringVar
     var_filename_preview: tk.StringVar
     var_flipflop_position: tk.StringVar
@@ -90,9 +92,6 @@ def build_capture_form(
     on_naming_mode_changed: Callable[[], None],
     on_refresh_com_ports: Callable[[], None],
     on_browse_dir: Callable[[], None],
-    on_browse_vivado_bat: Callable[[], None],
-    on_browse_vivado_project: Callable[[], None],
-    on_browse_vivado_tcl: Callable[[], None],
 ) -> CaptureForm:
     var_base_name = tk.StringVar()
     var_start_index = tk.StringVar()
@@ -105,7 +104,9 @@ def build_capture_form(
     var_save_dir = tk.StringVar()
     var_vivado_bat_path = tk.StringVar()
     var_vivado_project_path = tk.StringVar()
-    var_vivado_tcl_path = tk.StringVar()
+    var_vivado_tcl_bitstream = tk.StringVar()
+    var_vivado_bitstream_program = tk.StringVar()
+    var_vivado_tcl_program = tk.StringVar()
     var_auto_delay = tk.StringVar()
     var_filename_preview = tk.StringVar(value="(set fields to preview filename)")
     var_flipflop_position = tk.StringVar(value="DFF")
@@ -183,46 +184,12 @@ def build_capture_form(
     ttk.Entry(parent, textvariable=var_baud, width=12).grid(row=row, column=1, sticky="w", pady=4)
     row += 1
 
-    ttk.Label(parent, text="Save directory").grid(row=row, column=0, sticky="w", pady=4)
+    ttk.Label(parent, text="Result directory").grid(row=row, column=0, sticky="w", pady=4)
     save_row = ttk.Frame(parent)
     save_row.grid(row=row, column=1, sticky="ew", pady=4)
     save_row.columnconfigure(0, weight=1)
     ttk.Entry(save_row, textvariable=var_save_dir).grid(row=0, column=0, sticky="ew")
     ttk.Button(save_row, text="Browse…", command=on_browse_dir).grid(
-        row=0, column=1, padx=(8, 0)
-    )
-    row += 1
-
-    ttk.Label(parent, text="Vivado bat path").grid(row=row, column=0, sticky="w", pady=4)
-    vivado_bat_row = ttk.Frame(parent)
-    vivado_bat_row.grid(row=row, column=1, sticky="ew", pady=4)
-    vivado_bat_row.columnconfigure(0, weight=1)
-    ttk.Entry(vivado_bat_row, textvariable=var_vivado_bat_path).grid(
-        row=0, column=0, sticky="ew"
-    )
-    ttk.Button(vivado_bat_row, text="Browse…", command=on_browse_vivado_bat).grid(
-        row=0, column=1, padx=(8, 0)
-    )
-    row += 1
-
-    ttk.Label(parent, text="Vivado project (.xpr)").grid(row=row, column=0, sticky="w", pady=4)
-    vivado_project_row = ttk.Frame(parent)
-    vivado_project_row.grid(row=row, column=1, sticky="ew", pady=4)
-    vivado_project_row.columnconfigure(0, weight=1)
-    ttk.Entry(vivado_project_row, textvariable=var_vivado_project_path).grid(
-        row=0, column=0, sticky="ew"
-    )
-    ttk.Button(
-        vivado_project_row, text="Browse…", command=on_browse_vivado_project
-    ).grid(row=0, column=1, padx=(8, 0))
-    row += 1
-
-    ttk.Label(parent, text="TCL file path").grid(row=row, column=0, sticky="w", pady=4)
-    tcl_row = ttk.Frame(parent)
-    tcl_row.grid(row=row, column=1, sticky="ew", pady=4)
-    tcl_row.columnconfigure(0, weight=1)
-    ttk.Entry(tcl_row, textvariable=var_vivado_tcl_path).grid(row=0, column=0, sticky="ew")
-    ttk.Button(tcl_row, text="Browse…", command=on_browse_vivado_tcl).grid(
         row=0, column=1, padx=(8, 0)
     )
     row += 1
@@ -353,7 +320,9 @@ def build_capture_form(
         var_save_dir=var_save_dir,
         var_vivado_bat_path=var_vivado_bat_path,
         var_vivado_project_path=var_vivado_project_path,
-        var_vivado_tcl_path=var_vivado_tcl_path,
+        var_vivado_tcl_bitstream=var_vivado_tcl_bitstream,
+        var_vivado_bitstream_program=var_vivado_bitstream_program,
+        var_vivado_tcl_program=var_vivado_tcl_program,
         var_auto_delay=var_auto_delay,
         var_filename_preview=var_filename_preview,
         var_flipflop_position=var_flipflop_position,

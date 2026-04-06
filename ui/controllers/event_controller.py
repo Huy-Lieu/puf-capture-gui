@@ -12,6 +12,7 @@ from ui.services.capture_worker import CaptureWorker
 from ui.views.capture_form import CaptureForm
 from ui.views.control_panel import ControlPanelWidgets
 from ui.views.status_log import StatusLog
+from ui.views.vivado_config import VivadoPanelWidgets
 
 
 class EventController:
@@ -30,6 +31,10 @@ class EventController:
         self._com_label_to_port: dict[str, str] = {}
         self._vivado_proc = None
         self._vivado_thread: threading.Thread | None = None
+        self._vivado_panel: VivadoPanelWidgets | None = None
+
+    def bind_vivado_panel(self, panel: VivadoPanelWidgets) -> None:
+        self._vivado_panel = panel
 
     @property
     def com_label_to_port(self) -> dict[str, str]:
@@ -42,19 +47,24 @@ class EventController:
         self._log.text.after(0, lambda: self.append_status(msg))
 
     def _set_vivado_running(self, running: bool) -> None:
-        self._controls.btn_run_vivado.configure(state=tk.DISABLED if running else tk.NORMAL)
+        if self._vivado_panel is None:
+            return
+        state = tk.DISABLED if running else tk.NORMAL
+        self._vivado_panel.btn_generate_bitstream.configure(state=state)
+        self._vivado_panel.btn_program_device.configure(state=state)
 
-    def _stream_vivado_output(self, process, tcl: Path) -> None:
+    def _stream_vivado_output(self, process, tcl: Path, action_label: str) -> None:
+        tag = f"[Vivado:{action_label}]"
         if process.stdout is not None:
             for line in process.stdout:
                 text = line.rstrip()
                 if text:
-                    self._append_status_threadsafe(f"[Vivado] {text}")
+                    self._append_status_threadsafe(f"{tag} {text}")
         exit_code = process.wait()
         self._vivado_proc = None
         self._vivado_thread = None
         self._log.text.after(0, lambda: self._set_vivado_running(False))
-        self._append_status_threadsafe(f"Vivado finished for {tcl.name} (exit code {exit_code}).")
+        self._append_status_threadsafe(f"{tag} finished for {tcl.name} (exit code {exit_code}).")
 
     def set_running(self, running: bool) -> None:
         self._controls.btn_start.configure(state=tk.DISABLED if running else tk.NORMAL)
@@ -83,27 +93,74 @@ class EventController:
         if path:
             self._form.var_vivado_project_path.set(path)
 
-    def browse_vivado_tcl(self) -> None:
+    def _browse_vivado_tcl(self, target: tk.StringVar) -> None:
         path = filedialog.askopenfilename(
             title="Select TCL script file",
             filetypes=(("TCL files", "*.tcl"), ("All files", "*.*")),
         )
         if path:
-            self._form.var_vivado_tcl_path.set(path)
+            target.set(path)
 
-    def run_vivado_tcl(self) -> None:
+    def browse_vivado_tcl_bitstream(self) -> None:
+        self._browse_vivado_tcl(self._form.var_vivado_tcl_bitstream)
+
+    def browse_vivado_tcl_program(self) -> None:
+        self._browse_vivado_tcl(self._form.var_vivado_tcl_program)
+
+    def browse_vivado_bitstream_program(self) -> None:
+        path = filedialog.askopenfilename(
+            title="Select bitstream file",
+            filetypes=(("Bitstream files", "*.bit"), ("All files", "*.*")),
+        )
+        if path:
+            self._form.var_vivado_bitstream_program.set(path)
+
+    def run_vivado_generate_bitstream(self) -> None:
+        self._run_vivado_for_tcl(
+            self._form.var_vivado_tcl_bitstream.get().strip(), "GenerateBitstream"
+        )
+
+    def run_vivado_program_device(self) -> None:
+        bit_raw = self._form.var_vivado_bitstream_program.get().strip()
+        if not bit_raw:
+            messagebox.showerror(
+                "Missing bitstream path",
+                "Please set the bitstream file (.bit) for programming.",
+            )
+            return
+        bit = Path(bit_raw)
+        if bit.suffix.lower() != ".bit":
+            messagebox.showerror(
+                "Invalid bitstream file", "Bitstream path must point to a .bit file."
+            )
+            return
+        if not bit.is_file():
+            messagebox.showerror("Missing file", f"Bitstream file not found:\n{bit}")
+            return
+        self._run_vivado_for_tcl(
+            self._form.var_vivado_tcl_program.get().strip(),
+            "ProgrammingDevice",
+            extra_tclargs=(str(bit),),
+        )
+
+    def _run_vivado_for_tcl(
+        self,
+        tcl_path: str,
+        action_label: str,
+        *,
+        extra_tclargs: tuple[str, ...] = (),
+    ) -> None:
         if self._vivado_proc is not None and self._vivado_proc.poll() is None:
             self.append_status("Vivado run already in progress.")
             return
 
         vivado_bat = self._form.var_vivado_bat_path.get().strip()
         project_path = self._form.var_vivado_project_path.get().strip()
-        tcl_path = self._form.var_vivado_tcl_path.get().strip()
 
         if not vivado_bat or not project_path or not tcl_path:
             messagebox.showerror(
                 "Missing Vivado paths",
-                "Please select Vivado bat path, project (.xpr), and TCL script path.",
+                "Please set Vivado bat path, project (.xpr), and the TCL script path for this action.",
             )
             return
 
@@ -137,6 +194,7 @@ class EventController:
                     vivado_bat_path=str(bat),
                     project_path=str(project),
                     tcl_path=str(tcl),
+                    extra_tclargs=extra_tclargs,
                 )
             )
         except OSError as exc:
@@ -145,10 +203,10 @@ class EventController:
 
         self._vivado_proc = process
         self._set_vivado_running(True)
-        self.append_status(f"Vivado started with TCL: {tcl}")
+        self.append_status(f"[Vivado:{action_label}] Starting: {tcl}")
         self._vivado_thread = threading.Thread(
             target=self._stream_vivado_output,
-            args=(process, tcl),
+            args=(process, tcl, action_label),
             daemon=True,
         )
         self._vivado_thread.start()

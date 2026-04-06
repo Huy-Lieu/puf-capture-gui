@@ -9,6 +9,7 @@ class VivadoRunConfig:
     vivado_bat_path: str
     project_path: str
     tcl_path: str
+    extra_tclargs: tuple[str, ...] = ()
 
 
 def build_vivado_command(cfg: VivadoRunConfig) -> list[str]:
@@ -20,6 +21,7 @@ def build_vivado_command(cfg: VivadoRunConfig) -> list[str]:
         cfg.tcl_path,
         "-tclargs",
         cfg.project_path,
+        *cfg.extra_tclargs,
     ]
 
 

@@ -53,6 +53,28 @@ class VivadoRunnerTests(unittest.TestCase):
             bufsize=1,
         )
 
+    def test_build_vivado_command_appends_extra_tclargs_after_project(self) -> None:
+        cfg = VivadoRunConfig(
+            vivado_bat_path="vivado.bat",
+            project_path="design.xpr",
+            tcl_path="program.tcl",
+            extra_tclargs=("D:/out/design.bit",),
+        )
+        cmd = build_vivado_command(cfg)
+        self.assertEqual(
+            cmd,
+            [
+                "vivado.bat",
+                "-mode",
+                "batch",
+                "-source",
+                "program.tcl",
+                "-tclargs",
+                "design.xpr",
+                "D:/out/design.bit",
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
