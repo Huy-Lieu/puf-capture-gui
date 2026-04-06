@@ -148,14 +148,14 @@ Use the **Name mode** radio buttons.
 
 Use for **repeated captures** under the same configuration (e.g. noise / stability).
 
-### FF & MUX — scheme3
+### FF & MUX
 
 **Spatial / routing** characterization (flip-flop, MDIST, MUX pair, LDIST case):
 
 - **Flip-flop:** DFF, CFF, BFF, AFF (when not auto-looping)
 - **MDIST / MUX:** valid pairs per MDIST (`RealTermNaming.MDIST_CASES`)
 - **LDIST case:** dropdown labels → internal case IDs
-- **Auto-loop** (scheme3 only):
+- **Auto-loop**:
   - **Auto-loop FF positions** — DFF → CFF → BFF → AFF
   - **Auto-loop MDIST and mapped MUX pairs** — MDIST 8 down to 2 with valid MUX pairs
   - **Auto-loop LDIST cases** — all cases in a fixed order
@@ -164,9 +164,9 @@ Example filename shape: `FPGA7_…_MDIST8_M0_M7_DLUTA_ALUTB_LDIST6_DFF.txt` (see
 
 Each job step can still run multiple indices if **Start** / **End index** span more than one capture.
 
-### Initial Values — scheme4 (CFF R1 init)
+### Initial Values
 
-**Anderson-style initial-value** experiments on **CFF R1**:
+**Anderson-style initial-value** experiments:
 
 - **Inital Values** dropdown: one of **12** suffix tokens (`R1_INIT_PAIR_SUFFIXES` in `RealTermNaming.py`)
 - **Auto-loop all initial values (12 captures):** all 12 suffixes in order across the FPGA range
