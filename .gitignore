@@ -7,3 +7,10 @@ __pycache__/
 .venv/
 venv/
 env/
+
+# Cursor / local IDE
+.cursor/
+
+# Xilinx Vivado (journals/logs when run from repo root)
+vivado*.jou
+vivado*.log

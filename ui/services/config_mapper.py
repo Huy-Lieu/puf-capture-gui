@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import re
 
+from RealTermNaming import R1_INIT_PAIR_SUFFIXES
 from RealTermTypes import RealTermConfig
 from ui.services.naming_adapter import resolve_ldist_details, resolve_mdist_mux
+
 
 def parse_realterm_config(
     *,
@@ -25,14 +27,16 @@ def parse_realterm_config(
     mdist_loop_fixed_mux: bool,
     ldist_case_raw: str,
     ldist_loop: bool,
+    r1_pair_suffix_raw: str = "",
+    r1_loop_all_pairs: bool = False,
 ) -> RealTermConfig:
     base = base_name.strip()
     if not base:
         raise ValueError("Base name must not be empty.")
 
     mode = naming_mode.strip() or "scheme1"
-    if mode not in ("scheme1", "scheme3"):
-        raise ValueError("Naming mode must be scheme1 or scheme3.")
+    if mode not in ("scheme1", "scheme3", "scheme4"):
+        raise ValueError("Naming mode must be scheme1, scheme3, or scheme4.")
 
     try:
         fpga_index = int(fpga_index_raw.strip())
@@ -49,16 +53,6 @@ def parse_realterm_config(
         raise ValueError("End FPGA index must be > 0.")
     if end_fpga_index < fpga_index:
         raise ValueError("End FPGA index must be >= FPGA index.")
-
-    try:
-        start = int(start_index_raw.strip())
-    except Exception:
-        raise ValueError("Start index must be an integer.") from None
-
-    try:
-        end = int(end_index_raw.strip())
-    except Exception:
-        raise ValueError("End index must be an integer.") from None
 
     raw_com = com_port_raw.strip()
     if not raw_com:
@@ -86,6 +80,38 @@ def parse_realterm_config(
         delay = float(auto_delay_raw.strip())
     except Exception:
         raise ValueError("Auto delay must be a number.") from None
+
+    if mode == "scheme4":
+        suffix = (r1_pair_suffix_raw or "").strip()
+        if suffix not in R1_INIT_PAIR_SUFFIXES:
+            raise ValueError(
+                "R1 pair must be one of the 12 predefined suffix tokens (see dropdown)."
+            )
+        return RealTermConfig(
+            base_name=base,
+            start_index=1,
+            end_index=1,
+            file_naming_mode="scheme4",
+            fpga_index=fpga_index,
+            end_fpga_index=end_fpga_index,
+            r1_pair_suffix=suffix,
+            r1_loop_all_pairs=bool(r1_loop_all_pairs),
+            com_port=com_port,
+            baud=baud,
+            extension=".txt",
+            save_dir=save_dir_clean,
+            auto_delay_s=delay,
+        )
+
+    try:
+        start = int(start_index_raw.strip())
+    except Exception:
+        raise ValueError("Start index must be an integer.") from None
+
+    try:
+        end = int(end_index_raw.strip())
+    except Exception:
+        raise ValueError("End index must be an integer.") from None
 
     flipflop = (flipflop_position or "").strip().upper() or "DFF"
     if flipflop not in ("DFF", "CFF", "BFF", "AFF"):

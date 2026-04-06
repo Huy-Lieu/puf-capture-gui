@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from tkinter import ttk
 from typing import Callable
 
-from RealTermNaming import get_ldist_case_ids_ordered, get_ldist_case_label
+from RealTermNaming import R1_INIT_PAIR_SUFFIXES, get_ldist_case_ids_ordered, get_ldist_case_label
 
 
 @dataclass
@@ -19,6 +19,11 @@ class CaptureForm:
     var_com_port: tk.StringVar
     var_baud: tk.StringVar
     var_save_dir: tk.StringVar
+    var_vivado_bat_path: tk.StringVar
+    var_vivado_project_path: tk.StringVar
+    var_vivado_tcl_bitstream: tk.StringVar
+    var_vivado_bitstream_program: tk.StringVar
+    var_vivado_tcl_program: tk.StringVar
     var_auto_delay: tk.StringVar
     var_filename_preview: tk.StringVar
     var_flipflop_position: tk.StringVar
@@ -28,24 +33,47 @@ class CaptureForm:
     var_loop_mdist_only: tk.BooleanVar
     var_loop_ldist_only: tk.BooleanVar
     var_ldist_case: tk.StringVar
+    var_r1_pair_suffix: tk.StringVar
+    var_r1_loop_all_pairs: tk.BooleanVar
+    entry_fpga_index: ttk.Entry
+    entry_end_fpga_index: ttk.Entry
     entry_start_index: ttk.Entry
     entry_end_index: ttk.Entry
     cmb_flipflop_position: ttk.Combobox
     cmb_mdist_value: ttk.Combobox
     cmb_mux_pair: ttk.Combobox
     cmb_ldist_case: ttk.Combobox
+    cmb_r1_pair: ttk.Combobox
     chk_loop_ff_only: ttk.Checkbutton
     chk_loop_mdist_only: ttk.Checkbutton
     chk_loop_ldist_only: ttk.Checkbutton
+    chk_r1_loop_all_pairs: ttk.Checkbutton
     cmb_com_port: ttk.Combobox
 
     def apply_naming_mode_ui(self) -> None:
-        is_scheme3 = self.var_file_naming_mode.get() == "scheme3"
+        mode = self.var_file_naming_mode.get()
+        is_scheme3 = mode == "scheme3"
+        is_scheme4 = mode == "scheme4"
         loop_ff = bool(self.var_loop_ff_only.get())
         loop_mdist = bool(self.var_loop_mdist_only.get())
         loop_ldist = bool(self.var_loop_ldist_only.get())
-        self.entry_start_index.configure(state=tk.NORMAL)
-        self.entry_end_index.configure(state=tk.NORMAL)
+
+        if is_scheme4:
+            self.entry_start_index.configure(state=tk.DISABLED)
+            self.entry_end_index.configure(state=tk.DISABLED)
+            self.entry_end_fpga_index.configure(state=tk.NORMAL)
+            self.chk_r1_loop_all_pairs.configure(state=tk.NORMAL)
+            if bool(self.var_r1_loop_all_pairs.get()):
+                self.cmb_r1_pair.configure(state=tk.DISABLED)
+            else:
+                self.cmb_r1_pair.configure(state="readonly")
+        else:
+            self.entry_start_index.configure(state=tk.NORMAL)
+            self.entry_end_index.configure(state=tk.NORMAL)
+            self.entry_end_fpga_index.configure(state=tk.NORMAL)
+            self.cmb_r1_pair.configure(state=tk.DISABLED)
+            self.chk_r1_loop_all_pairs.configure(state=tk.DISABLED)
+
         mdist_state = "readonly" if (is_scheme3 and not loop_mdist) else tk.DISABLED
         ff_state = "readonly" if (is_scheme3 and not loop_ff) else tk.DISABLED
         ldist_state = "readonly" if (is_scheme3 and not loop_ldist) else tk.DISABLED
@@ -74,15 +102,22 @@ def build_capture_form(
     var_com_port = tk.StringVar()
     var_baud = tk.StringVar()
     var_save_dir = tk.StringVar()
+    var_vivado_bat_path = tk.StringVar()
+    var_vivado_project_path = tk.StringVar()
+    var_vivado_tcl_bitstream = tk.StringVar()
+    var_vivado_bitstream_program = tk.StringVar()
+    var_vivado_tcl_program = tk.StringVar()
     var_auto_delay = tk.StringVar()
     var_filename_preview = tk.StringVar(value="(set fields to preview filename)")
     var_flipflop_position = tk.StringVar(value="DFF")
     var_mdist_value = tk.StringVar(value="8")
     var_mux_pair = tk.StringVar(value="M0-M7")
-    var_loop_ff_only = tk.BooleanVar(value=True)
+    var_loop_ff_only = tk.BooleanVar(value=False)
     var_loop_mdist_only = tk.BooleanVar(value=False)
     var_loop_ldist_only = tk.BooleanVar(value=False)
     var_ldist_case = tk.StringVar(value=get_ldist_case_label(1))
+    var_r1_pair_suffix = tk.StringVar(value=R1_INIT_PAIR_SUFFIXES[0])
+    var_r1_loop_all_pairs = tk.BooleanVar(value=False)
 
     row = 0
     ttk.Label(parent, text="Name mode").grid(row=row, column=0, sticky="w", pady=4)
@@ -94,26 +129,31 @@ def build_capture_form(
         variable=var_file_naming_mode,
         value="scheme1",
         command=on_naming_mode_changed,
-    ).grid(row=0, column=0, padx=(0, 12))
+    ).grid(row=0, column=0, padx=(0, 8))
     ttk.Radiobutton(
         naming_row,
         text="FF & MUX",
         variable=var_file_naming_mode,
         value="scheme3",
         command=on_naming_mode_changed,
-    ).grid(row=0, column=1, padx=(12, 0))
+    ).grid(row=0, column=1, padx=(8, 8))
+    ttk.Radiobutton(
+        naming_row,
+        text="Initial Values",
+        variable=var_file_naming_mode,
+        value="scheme4",
+        command=on_naming_mode_changed,
+    ).grid(row=0, column=2, padx=(8, 0))
     row += 1
 
     ttk.Label(parent, text="FPGA index").grid(row=row, column=0, sticky="w", pady=4)
-    ttk.Entry(parent, textvariable=var_fpga_index, width=12).grid(
-        row=row, column=1, sticky="w", pady=4
-    )
+    entry_fpga_index = ttk.Entry(parent, textvariable=var_fpga_index, width=12)
+    entry_fpga_index.grid(row=row, column=1, sticky="w", pady=4)
     row += 1
 
     ttk.Label(parent, text="End FPGA index").grid(row=row, column=0, sticky="w", pady=4)
-    ttk.Entry(parent, textvariable=var_end_fpga_index, width=12).grid(
-        row=row, column=1, sticky="w", pady=4
-    )
+    entry_end_fpga_index = ttk.Entry(parent, textvariable=var_end_fpga_index, width=12)
+    entry_end_fpga_index.grid(row=row, column=1, sticky="w", pady=4)
     row += 1
 
     ttk.Label(parent, text="Base name template").grid(row=row, column=0, sticky="w", pady=4)
@@ -144,7 +184,7 @@ def build_capture_form(
     ttk.Entry(parent, textvariable=var_baud, width=12).grid(row=row, column=1, sticky="w", pady=4)
     row += 1
 
-    ttk.Label(parent, text="Save directory").grid(row=row, column=0, sticky="w", pady=4)
+    ttk.Label(parent, text="Result directory").grid(row=row, column=0, sticky="w", pady=4)
     save_row = ttk.Frame(parent)
     save_row.grid(row=row, column=1, sticky="ew", pady=4)
     save_row.columnconfigure(0, weight=1)
@@ -238,6 +278,28 @@ def build_capture_form(
     chk_loop_ldist_only.grid(row=row, column=1, sticky="w", pady=4)
     row += 1
 
+    ttk.Label(parent, text="Inital Values").grid(row=row, column=0, sticky="w", pady=4)
+    cmb_r1_pair = ttk.Combobox(
+        parent,
+        textvariable=var_r1_pair_suffix,
+        width=22,
+        state=tk.DISABLED,
+        values=R1_INIT_PAIR_SUFFIXES,
+    )
+    cmb_r1_pair.grid(row=row, column=1, sticky="w", pady=4)
+    row += 1
+    chk_r1_loop_all_pairs = ttk.Checkbutton(
+        parent,
+        text="Auto-loop all initial values (12 captures)",
+        variable=var_r1_loop_all_pairs,
+        onvalue=True,
+        offvalue=False,
+        state=tk.DISABLED,
+        command=on_naming_mode_changed,
+    )
+    chk_r1_loop_all_pairs.grid(row=row, column=1, sticky="w", pady=4)
+    row += 1
+
     ttk.Label(parent, text="File Name Preview:").grid(row=row, column=0, sticky="nw", pady=4)
     ttk.Label(
         parent,
@@ -256,6 +318,11 @@ def build_capture_form(
         var_com_port=var_com_port,
         var_baud=var_baud,
         var_save_dir=var_save_dir,
+        var_vivado_bat_path=var_vivado_bat_path,
+        var_vivado_project_path=var_vivado_project_path,
+        var_vivado_tcl_bitstream=var_vivado_tcl_bitstream,
+        var_vivado_bitstream_program=var_vivado_bitstream_program,
+        var_vivado_tcl_program=var_vivado_tcl_program,
         var_auto_delay=var_auto_delay,
         var_filename_preview=var_filename_preview,
         var_flipflop_position=var_flipflop_position,
@@ -265,14 +332,20 @@ def build_capture_form(
         var_loop_mdist_only=var_loop_mdist_only,
         var_loop_ldist_only=var_loop_ldist_only,
         var_ldist_case=var_ldist_case,
+        var_r1_pair_suffix=var_r1_pair_suffix,
+        var_r1_loop_all_pairs=var_r1_loop_all_pairs,
+        entry_fpga_index=entry_fpga_index,
+        entry_end_fpga_index=entry_end_fpga_index,
         entry_start_index=entry_start_index,
         entry_end_index=entry_end_index,
         cmb_flipflop_position=cmb_flipflop_position,
         cmb_mdist_value=cmb_mdist_value,
         cmb_mux_pair=cmb_mux_pair,
         cmb_ldist_case=cmb_ldist_case,
+        cmb_r1_pair=cmb_r1_pair,
         chk_loop_ff_only=chk_loop_ff_only,
         chk_loop_mdist_only=chk_loop_mdist_only,
         chk_loop_ldist_only=chk_loop_ldist_only,
+        chk_r1_loop_all_pairs=chk_r1_loop_all_pairs,
         cmb_com_port=cmb_com_port,
     )

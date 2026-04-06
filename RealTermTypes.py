@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-FileNamingMode = Literal["scheme1", "scheme3"]
+FileNamingMode = Literal["scheme1", "scheme3", "scheme4"]
 
 
 @dataclass(frozen=True)
@@ -14,6 +14,8 @@ class RealTermConfig:
     file_naming_mode: FileNamingMode = "scheme1"
     fpga_index: int = 7
     end_fpga_index: int = 7
+    r1_pair_suffix: str = ""
+    r1_loop_all_pairs: bool = False
     flipflop_position: str = "CFF"
     mdist_value: int = 8
     mux_a: int = 0

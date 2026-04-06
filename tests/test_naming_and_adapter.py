@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from RealTermNaming import build_capture_filename
+from RealTermNaming import R1_INIT_PAIR_SUFFIXES, build_capture_filename
 from RealTermTypes import RealTermConfig
 from ui.services.naming_adapter import parse_ldist_case_id, resolve_mdist_mux
 
@@ -44,6 +44,25 @@ class NamingAdapterTests(unittest.TestCase):
         name = build_capture_filename(cfg, 1)
         self.assertNotIn("_N001", name)
         self.assertTrue(name.endswith("_DFF.txt"))
+
+    def test_scheme4_filename_literal_asterisk_suffix(self) -> None:
+        star_suffix = R1_INIT_PAIR_SUFFIXES[-1]
+        self.assertTrue(star_suffix.endswith("*"))
+        cfg = RealTermConfig(
+            base_name="ignored",
+            start_index=1,
+            end_index=1,
+            file_naming_mode="scheme4",
+            fpga_index=7,
+            end_fpga_index=7,
+            r1_pair_suffix=star_suffix,
+            r1_loop_all_pairs=False,
+        )
+        name = build_capture_filename(cfg, 1)
+        self.assertEqual(
+            name,
+            f"FPGA7_LDIST6_DLUTA_ALUTB_MDIST8_M0_M7_CFF_R1_{star_suffix}.txt",
+        )
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from RealTermNaming import get_mdist_pairs, resolve_ldist_case
+from RealTermNaming import R1_INIT_PAIR_SUFFIXES, get_mdist_pairs, resolve_ldist_case
 from RealTermTypes import RealTermConfig
 
 
@@ -11,14 +11,19 @@ def validate_config(cfg: RealTermConfig) -> None:
         raise ValueError("start_index must be >= 0")
     if cfg.end_index < cfg.start_index:
         raise ValueError("end_index must be >= start_index")
-    if cfg.file_naming_mode not in ("scheme1", "scheme3"):
-        raise ValueError("file_naming_mode must be 'scheme1' or 'scheme3'")
+    if cfg.file_naming_mode not in ("scheme1", "scheme3", "scheme4"):
+        raise ValueError("file_naming_mode must be 'scheme1', 'scheme3', or 'scheme4'")
     if cfg.fpga_index <= 0:
         raise ValueError("fpga_index must be > 0")
     if cfg.end_fpga_index <= 0:
         raise ValueError("end_fpga_index must be > 0")
     if cfg.end_fpga_index < cfg.fpga_index:
         raise ValueError("end_fpga_index must be >= fpga_index")
+    if cfg.file_naming_mode == "scheme4":
+        if cfg.start_index != 1 or cfg.end_index != 1:
+            raise ValueError("scheme4 requires start_index and end_index to be 1")
+        if cfg.r1_pair_suffix not in R1_INIT_PAIR_SUFFIXES:
+            raise ValueError("r1_pair_suffix must be one of the 12 CFF R1 init pair tokens")
     if cfg.file_naming_mode == "scheme3":
         if cfg.flipflop_position not in ("AFF", "BFF", "CFF", "DFF"):
             raise ValueError("flipflop_position must be one of AFF/BFF/CFF/DFF for scheme3")

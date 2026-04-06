@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from RealTermNaming import get_ldist_case_ids_ordered, get_ldist_case_label
+from RealTermNaming import R1_INIT_PAIR_SUFFIXES, get_ldist_case_ids_ordered, get_ldist_case_label
 from ui.views.capture_form import CaptureForm
 
 
@@ -19,12 +19,18 @@ class AppDefaults:
     save_dir: str = (
         r"D:\All_SelfLearning\Prj\1_\PUF_Experimental_Results\Full_Test\InitialValues\Test\Raw"
     )
+    vivado_bat_path: str = "C:/Xilinx/Vivado/2019.1/bin/vivado.bat"
+    vivado_project_path: str = ""
+    vivado_tcl_bitstream: str = ""
+    vivado_bitstream_program: str = ""
+    vivado_tcl_program: str = ""
     auto_delay: str = "5"
     flipflop_position: str = "DFF"
     mdist_value: str = "8"
-    loop_ff_only: bool = True
+    loop_ff_only: bool = False
     loop_mdist_only: bool = False
     loop_ldist_only: bool = False
+    loop_initial_values: bool = False
 
 
 def apply_defaults(form: CaptureForm, defaults: AppDefaults | None = None) -> None:
@@ -38,10 +44,18 @@ def apply_defaults(form: CaptureForm, defaults: AppDefaults | None = None) -> No
     form.var_com_port.set(d.com_port)
     form.var_baud.set(d.baud)
     form.var_save_dir.set(d.save_dir)
+    form.var_vivado_bat_path.set(d.vivado_bat_path)
+    form.var_vivado_project_path.set(d.vivado_project_path)
+    form.var_vivado_tcl_bitstream.set(d.vivado_tcl_bitstream)
+    form.var_vivado_bitstream_program.set(d.vivado_bitstream_program)
+    form.var_vivado_tcl_program.set(d.vivado_tcl_program)
     form.var_auto_delay.set(d.auto_delay)
     form.var_flipflop_position.set(d.flipflop_position)
     form.var_mdist_value.set(d.mdist_value)
     form.var_loop_ff_only.set(d.loop_ff_only)
     form.var_loop_mdist_only.set(d.loop_mdist_only)
+    form.var_r1_loop_all_pairs.set(d.loop_initial_values)
     form.var_ldist_case.set(get_ldist_case_label(get_ldist_case_ids_ordered()[0]))
     form.var_loop_ldist_only.set(d.loop_ldist_only)
+    form.var_r1_pair_suffix.set(R1_INIT_PAIR_SUFFIXES[0])
+

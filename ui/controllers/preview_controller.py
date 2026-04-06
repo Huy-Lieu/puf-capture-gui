@@ -41,6 +41,8 @@ class PreviewController:
                 mdist_loop_fixed_mux=self._form.var_loop_mdist_only.get(),
                 ldist_case_raw=self._form.var_ldist_case.get(),
                 ldist_loop=self._form.var_loop_ldist_only.get(),
+                r1_pair_suffix_raw=self._form.var_r1_pair_suffix.get(),
+                r1_loop_all_pairs=self._form.var_r1_loop_all_pairs.get(),
             )
             self._form.var_filename_preview.set(preview)
         except Exception as exc:
