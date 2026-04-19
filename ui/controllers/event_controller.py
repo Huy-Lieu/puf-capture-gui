@@ -32,6 +32,7 @@ class EventController:
         self._vivado_proc = None
         self._vivado_thread: threading.Thread | None = None
         self._vivado_panel: VivadoPanelWidgets | None = None
+        self._vivado_auto_capture_after_program = False
 
     def bind_vivado_panel(self, panel: VivadoPanelWidgets) -> None:
         self._vivado_panel = panel
@@ -61,10 +62,49 @@ class EventController:
                 if text:
                     self._append_status_threadsafe(f"{tag} {text}")
         exit_code = process.wait()
+        should_auto_capture = self._vivado_auto_capture_after_program
+        self._vivado_auto_capture_after_program = False
         self._vivado_proc = None
         self._vivado_thread = None
         self._log.text.after(0, lambda: self._set_vivado_running(False))
+        if should_auto_capture:
+            if exit_code == 0:
+                self._schedule_post_program_capture(tag)
+            else:
+                self._append_status_threadsafe(
+                    f"{tag} Auto-capture skipped: programming failed (exit code {exit_code})."
+                )
         self._append_status_threadsafe(f"{tag} finished for {tcl.name} (exit code {exit_code}).")
+
+    def _schedule_post_program_capture(self, tag: str) -> None:
+        if not self._worker.is_running():
+            self._append_status_threadsafe(
+                f"{tag} Auto-capture skipped: connect to RealTerm first."
+            )
+            return
+        try:
+            delay_s = float(self._form.var_auto_delay.get().strip())
+        except Exception:
+            self._append_status_threadsafe(
+                f"{tag} Auto-capture skipped: invalid Auto delay value."
+            )
+            return
+        if delay_s < 0:
+            self._append_status_threadsafe(
+                f"{tag} Auto-capture skipped: Auto delay must be >= 0."
+            )
+            return
+        delay_ms = int(delay_s * 1000)
+        self._append_status_threadsafe(f"{tag} Auto-capture scheduled in {delay_s:g}s.")
+        self._log.text.after(delay_ms, self._trigger_post_program_capture_once)
+
+    def _trigger_post_program_capture_once(self) -> None:
+        if not self._worker.is_running():
+            self.append_status(
+                "[Vivado:ProgrammingDevice] Auto-capture skipped: RealTerm is no longer connected."
+            )
+            return
+        self.capture_now()
 
     def set_running(self, running: bool) -> None:
         self._controls.btn_start.configure(state=tk.DISABLED if running else tk.NORMAL)
@@ -145,6 +185,7 @@ class EventController:
             self._form.var_vivado_tcl_program.get().strip(),
             "ProgrammingDevice",
             extra_tclargs=(str(bit),),
+            auto_capture_after_program=True,
         )
 
     def _run_vivado_for_tcl(
@@ -153,6 +194,7 @@ class EventController:
         action_label: str,
         *,
         extra_tclargs: tuple[str, ...] = (),
+        auto_capture_after_program: bool = False,
     ) -> None:
         if self._vivado_proc is not None and self._vivado_proc.poll() is None:
             self.append_status("Vivado run already in progress.")
@@ -206,6 +248,7 @@ class EventController:
             return
 
         self._vivado_proc = process
+        self._vivado_auto_capture_after_program = auto_capture_after_program
         self._set_vivado_running(True)
         self.append_status(f"[Vivado:{action_label}] Starting: {tcl}")
         self._vivado_thread = threading.Thread(
@@ -275,5 +318,10 @@ class EventController:
         if not self._worker.is_running():
             self.append_status("Capture ignored: not connected.")
             return
-        self._worker.trigger_capture()
+        try:
+            cfg = self.read_config()
+        except Exception as exc:
+            messagebox.showerror("Invalid configuration", str(exc))
+            return
+        self._worker.enqueue_capture(cfg)
         self.append_status("Capture trigger sent.")

@@ -31,8 +31,6 @@ def parse_realterm_config(
     r1_loop_all_pairs: bool = False,
 ) -> RealTermConfig:
     base = base_name.strip()
-    if not base:
-        raise ValueError("Base name must not be empty.")
 
     mode = naming_mode.strip() or "scheme1"
     if mode not in ("scheme1", "scheme3", "scheme4"):

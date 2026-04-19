@@ -30,7 +30,8 @@ def build_preview_name(
 ) -> str:
     mode = naming_mode.strip() or "scheme1"
     fpga_index = safe_int(fpga_index_raw, 1)
-    base = base_name.strip() or "BaseName"
+    # Keep preview aligned with current form input; do not inject placeholder text.
+    base = base_name.strip()
 
     if mode == "scheme4":
         fpga_start = max(fpga_index, 1)

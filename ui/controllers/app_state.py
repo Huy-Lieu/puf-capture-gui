@@ -8,7 +8,7 @@ from ui.views.capture_form import CaptureForm
 
 @dataclass(frozen=True)
 class AppDefaults:
-    base_name: str = "FPGA7_LDIST6_DLUTA_ALUTB_MDIST8_M0_M7_CFF_R1_"
+    base_name: str = ""
     naming_mode: str = "scheme1"
     fpga_index: str = "7"
     end_fpga_index: str = "7"

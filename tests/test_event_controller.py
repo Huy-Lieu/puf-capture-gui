@@ -31,8 +31,23 @@ class DummyLog:
 
 
 class DummyWorker:
+    def __init__(self, running: bool = False) -> None:
+        self.running = running
+        self.capture_triggers = 0
+
     def is_running(self) -> bool:
-        return False
+        return self.running
+
+    def start(self, _cfg) -> bool:
+        self.running = True
+        return True
+
+    def stop(self) -> bool:
+        self.running = False
+        return True
+
+    def enqueue_capture(self, _cfg) -> None:
+        self.capture_triggers += 1
 
 
 class DummyButton:
@@ -68,7 +83,9 @@ class ImmediateThread:
 
 
 class EventControllerVivadoTests(unittest.TestCase):
-    def _make_controller(self) -> tuple[EventController, SimpleNamespace, DummyLog, VivadoPanelWidgets]:
+    def _make_controller(
+        self, *, worker: DummyWorker | None = None
+    ) -> tuple[EventController, SimpleNamespace, DummyLog, VivadoPanelWidgets]:
         form = SimpleNamespace(
             var_vivado_bat_path=DummyVar(""),
             var_vivado_project_path=DummyVar(""),
@@ -76,6 +93,25 @@ class EventControllerVivadoTests(unittest.TestCase):
             var_vivado_bitstream_generate_name=DummyVar(""),
             var_vivado_bitstream_program=DummyVar(""),
             var_vivado_tcl_program=DummyVar(""),
+            var_auto_delay=DummyVar("0"),
+            var_base_name=DummyVar("BASE"),
+            var_file_naming_mode=DummyVar("scheme1"),
+            var_fpga_index=DummyVar("7"),
+            var_end_fpga_index=DummyVar("7"),
+            var_start_index=DummyVar("1"),
+            var_end_index=DummyVar("1"),
+            var_com_port=DummyVar("COM3"),
+            var_baud=DummyVar("115200"),
+            var_save_dir=DummyVar("."),
+            var_flipflop_position=DummyVar("DFF"),
+            var_mdist_value=DummyVar("8"),
+            var_mux_pair=DummyVar("M0-M7"),
+            var_loop_ff_only=DummyVar(False),
+            var_loop_mdist_only=DummyVar(False),
+            var_ldist_case=DummyVar("DLUTA + ALUTB, LDIST6"),
+            var_loop_ldist_only=DummyVar(False),
+            var_r1_pair_suffix=DummyVar("1111_AAAA"),
+            var_r1_loop_all_pairs=DummyVar(False),
         )
         controls = SimpleNamespace(
             btn_start=DummyButton(),
@@ -84,7 +120,8 @@ class EventControllerVivadoTests(unittest.TestCase):
             lbl_state=SimpleNamespace(configure=lambda **_: None),
         )
         log = DummyLog()
-        controller = EventController(form=form, controls=controls, log=log, worker=DummyWorker())
+        active_worker = worker if worker is not None else DummyWorker()
+        controller = EventController(form=form, controls=controls, log=log, worker=active_worker)
         vivado = VivadoPanelWidgets(
             btn_generate_bitstream=DummyButton(),
             btn_program_device=DummyButton(),
@@ -197,6 +234,112 @@ class EventControllerVivadoTests(unittest.TestCase):
             cfg = starter.call_args[0][0]
             self.assertEqual(cfg.extra_tclargs, (str(bit),))
             self.assertTrue(any("[Vivado:ProgrammingDevice]" in m for m in log.messages))
+
+    def test_program_device_schedules_one_auto_capture_after_delay(self) -> None:
+        worker = DummyWorker(running=True)
+        controller, form, log, _ = self._make_controller(worker=worker)
+        with TemporaryDirectory() as tmp:
+            bat = Path(tmp) / "vivado.bat"
+            xpr = Path(tmp) / "design.xpr"
+            tcl = Path(tmp) / "program.tcl"
+            bit = Path(tmp) / "design.bit"
+            bat.write_text("@echo\n", encoding="utf-8")
+            xpr.write_text("dummy\n", encoding="utf-8")
+            tcl.write_text("exit\n", encoding="utf-8")
+            bit.write_bytes(b"\x00")
+            form.var_vivado_bat_path.set(str(bat))
+            form.var_vivado_project_path.set(str(xpr))
+            form.var_vivado_tcl_program.set(str(tcl))
+            form.var_vivado_bitstream_program.set(str(bit))
+            form.var_auto_delay.set("1.5")
+
+            fake_process = FakeProcess([], exit_code=0)
+            with patch(
+                "ui.controllers.event_controller.start_vivado_batch", return_value=fake_process
+            ), patch("ui.controllers.event_controller.threading.Thread", ImmediateThread):
+                controller.run_vivado_program_device()
+
+            self.assertEqual(worker.capture_triggers, 1)
+            self.assertTrue(any("Auto-capture scheduled in 1.5s" in m for m in log.messages))
+
+    def test_program_device_does_not_auto_capture_on_failure(self) -> None:
+        worker = DummyWorker(running=True)
+        controller, form, log, _ = self._make_controller(worker=worker)
+        with TemporaryDirectory() as tmp:
+            bat = Path(tmp) / "vivado.bat"
+            xpr = Path(tmp) / "design.xpr"
+            tcl = Path(tmp) / "program.tcl"
+            bit = Path(tmp) / "design.bit"
+            bat.write_text("@echo\n", encoding="utf-8")
+            xpr.write_text("dummy\n", encoding="utf-8")
+            tcl.write_text("exit\n", encoding="utf-8")
+            bit.write_bytes(b"\x00")
+            form.var_vivado_bat_path.set(str(bat))
+            form.var_vivado_project_path.set(str(xpr))
+            form.var_vivado_tcl_program.set(str(tcl))
+            form.var_vivado_bitstream_program.set(str(bit))
+
+            fake_process = FakeProcess([], exit_code=2)
+            with patch(
+                "ui.controllers.event_controller.start_vivado_batch", return_value=fake_process
+            ), patch("ui.controllers.event_controller.threading.Thread", ImmediateThread):
+                controller.run_vivado_program_device()
+
+            self.assertEqual(worker.capture_triggers, 0)
+            self.assertTrue(any("Auto-capture skipped: programming failed" in m for m in log.messages))
+
+    def test_program_device_does_not_auto_capture_when_not_connected(self) -> None:
+        worker = DummyWorker(running=False)
+        controller, form, log, _ = self._make_controller(worker=worker)
+        with TemporaryDirectory() as tmp:
+            bat = Path(tmp) / "vivado.bat"
+            xpr = Path(tmp) / "design.xpr"
+            tcl = Path(tmp) / "program.tcl"
+            bit = Path(tmp) / "design.bit"
+            bat.write_text("@echo\n", encoding="utf-8")
+            xpr.write_text("dummy\n", encoding="utf-8")
+            tcl.write_text("exit\n", encoding="utf-8")
+            bit.write_bytes(b"\x00")
+            form.var_vivado_bat_path.set(str(bat))
+            form.var_vivado_project_path.set(str(xpr))
+            form.var_vivado_tcl_program.set(str(tcl))
+            form.var_vivado_bitstream_program.set(str(bit))
+
+            fake_process = FakeProcess([], exit_code=0)
+            with patch(
+                "ui.controllers.event_controller.start_vivado_batch", return_value=fake_process
+            ), patch("ui.controllers.event_controller.threading.Thread", ImmediateThread):
+                controller.run_vivado_program_device()
+
+            self.assertEqual(worker.capture_triggers, 0)
+            self.assertTrue(any("Auto-capture skipped: connect to RealTerm first." in m for m in log.messages))
+
+    def test_program_device_does_not_auto_capture_with_invalid_delay(self) -> None:
+        worker = DummyWorker(running=True)
+        controller, form, log, _ = self._make_controller(worker=worker)
+        with TemporaryDirectory() as tmp:
+            bat = Path(tmp) / "vivado.bat"
+            xpr = Path(tmp) / "design.xpr"
+            tcl = Path(tmp) / "program.tcl"
+            bit = Path(tmp) / "design.bit"
+            bat.write_text("@echo\n", encoding="utf-8")
+            xpr.write_text("dummy\n", encoding="utf-8")
+            tcl.write_text("exit\n", encoding="utf-8")
+            bit.write_bytes(b"\x00")
+            form.var_vivado_bat_path.set(str(bat))
+            form.var_vivado_project_path.set(str(xpr))
+            form.var_vivado_tcl_program.set(str(tcl))
+            form.var_vivado_bitstream_program.set(str(bit))
+            form.var_auto_delay.set("abc")
+
+            fake_process = FakeProcess([], exit_code=0)
+            with patch(
+                "ui.controllers.event_controller.start_vivado_batch", return_value=fake_process
+            ), patch("ui.controllers.event_controller.threading.Thread", ImmediateThread):
+                controller.run_vivado_program_device()
+
+            self.assertEqual(worker.capture_triggers, 0)
+            self.assertTrue(any("Auto-capture skipped: invalid Auto delay value." in m for m in log.messages))
 
 
 if __name__ == "__main__":

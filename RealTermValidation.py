@@ -5,8 +5,6 @@ from RealTermTypes import RealTermConfig
 
 
 def validate_config(cfg: RealTermConfig) -> None:
-    if not cfg.base_name:
-        raise ValueError("base_name must not be empty")
     if cfg.start_index < 0:
         raise ValueError("start_index must be >= 0")
     if cfg.end_index < cfg.start_index:

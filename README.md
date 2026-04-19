@@ -197,6 +197,7 @@ One suffix includes a **literal `*`** in the stem (`5555_AAAA*`).
 | **Capture** | While connected, advances past “wait for trigger” for the **next** scheduled capture |
 
 After **Connect**, the tool waits for **Capture** between steps (**manual pacing**). **Status** shows headings like `--- FF & MUX Step k / N ---` or `=== Reliability FPGA … ===`.
+After **Programming Device** succeeds, the GUI also auto-triggers **one** capture step after the configured **Auto delay (s)**. This post-program auto-capture only runs if RealTerm is already connected.
 
 **Idle** / **Running** reflects whether a capture session is active.
 
@@ -213,7 +214,7 @@ After **Connect**, the tool waits for **Capture** between steps (**manual pacing
 | **Generate Bitstream** | Runs batch Vivado with that TCL |
 | **Bitstream to program (.bit)** | Bitstream path for programming |
 | **Programming Device TCL** | Programming script; GUI adds the **.bit path** as extra `tclargs` after the `.xpr` |
-| **Programming Device** | Runs that flow |
+| **Programming Device** | Runs that flow; on exit code `0`, schedules one capture trigger using **Auto delay (s)** if connected |
 
 Vivado **stdout** appears in **Status** as `[Vivado:GenerateBitstream]` / `[Vivado:ProgrammingDevice]`. Only one Vivado run at a time; action buttons disable while it runs.
 
@@ -229,7 +230,7 @@ Command construction: `ui/services/vivado_runner.build_vivado_command`.
 
 **CFF R1 initial values:** Name mode **Initial Values** → one R1 pair or **Auto-loop all** → set FPGA range → **Connect** → **Capture** per step.
 
-**Vivado then capture:** Fill **Vivado Configuration**, run **Generate Bitstream** / **Programming Device** as needed, then run serial captures as above.
+**Vivado then capture:** Connect to RealTerm first, then run **Programming Device**. On successful programming, one capture is auto-triggered after **Auto delay (s)**; use **Capture** manually for any additional steps.
 
 ---
 

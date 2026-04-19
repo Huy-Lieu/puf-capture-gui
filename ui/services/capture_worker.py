@@ -5,7 +5,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from CaptureRunner import run_capture
+from CaptureRunner import run_live_capture_session
 from RealTermClient import disconnect_realterm
 from RealTermTypes import RealTermConfig
 
@@ -14,7 +14,7 @@ from RealTermTypes import RealTermConfig
 class WorkerState:
     worker: Optional[threading.Thread] = None
     stop_event: threading.Event = field(default_factory=threading.Event)
-    capture_event: threading.Event = field(default_factory=threading.Event)
+    capture_cfg_queue: "queue.Queue[RealTermConfig]" = field(default_factory=queue.Queue)
 
 
 class CaptureWorker:
@@ -26,26 +26,23 @@ class CaptureWorker:
     def is_running(self) -> bool:
         return self.state.worker is not None and self.state.worker.is_alive()
 
-    def wait_for_capture_trigger(self) -> bool:
-        while not self.state.stop_event.is_set():
-            if self.state.capture_event.wait(timeout=0.1):
-                self.state.capture_event.clear()
-                return True
-        return False
-
-    def start(self, cfg: RealTermConfig) -> bool:
+    def start(self, session_cfg: RealTermConfig) -> bool:
         if self.is_running():
             return False
 
         self.state.stop_event.clear()
-        self.state.capture_event.clear()
+        while True:
+            try:
+                self.state.capture_cfg_queue.get_nowait()
+            except queue.Empty:
+                break
 
         def worker() -> None:
             try:
-                run_capture(
-                    cfg,
+                run_live_capture_session(
+                    session_cfg,
+                    self.state.capture_cfg_queue,
                     should_stop=self.state.stop_event.is_set,
-                    wait_for_manual_trigger=self.wait_for_capture_trigger,
                     on_status=self._queue.put,
                 )
                 self._queue.put("Done.")
@@ -58,10 +55,9 @@ class CaptureWorker:
         self.state.worker.start()
         return True
 
-    def trigger_capture(self) -> None:
-        self.state.capture_event.set()
+    def enqueue_capture(self, cfg: RealTermConfig) -> None:
+        self.state.capture_cfg_queue.put(cfg)
 
     def stop(self) -> bool:
         self.state.stop_event.set()
-        self.state.capture_event.set()
         return disconnect_realterm()

@@ -63,8 +63,25 @@ class RealTermClient:
             port_open = False
 
         if port_open:
-            status("Port is already open.")
-            return
+            try:
+                current_port = int(self._rt.Port)
+            except Exception:
+                current_port = cfg.com_port
+            try:
+                current_baud = int(self._rt.Baud)
+            except Exception:
+                current_baud = cfg.baud
+            if current_port == cfg.com_port and current_baud == cfg.baud:
+                status("Port is already open.")
+                return
+            try:
+                self._rt.PortOpen = 0
+            except Exception:
+                try:
+                    self._rt.Close()
+                except Exception:
+                    pass
+            status("Reopening serial after COM/baud change...")
 
         open_errors = []
         try:
