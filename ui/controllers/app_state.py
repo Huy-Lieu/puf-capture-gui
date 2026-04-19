@@ -22,6 +22,7 @@ class AppDefaults:
     vivado_bat_path: str = "C:/Xilinx/Vivado/2019.1/bin/vivado.bat"
     vivado_project_path: str = ""
     vivado_tcl_bitstream: str = ""
+    vivado_bitstream_generate_name: str = ""
     vivado_bitstream_program: str = ""
     vivado_tcl_program: str = ""
     auto_delay: str = "5"
@@ -47,6 +48,7 @@ def apply_defaults(form: CaptureForm, defaults: AppDefaults | None = None) -> No
     form.var_vivado_bat_path.set(d.vivado_bat_path)
     form.var_vivado_project_path.set(d.vivado_project_path)
     form.var_vivado_tcl_bitstream.set(d.vivado_tcl_bitstream)
+    form.var_vivado_bitstream_generate_name.set(d.vivado_bitstream_generate_name)
     form.var_vivado_bitstream_program.set(d.vivado_bitstream_program)
     form.var_vivado_tcl_program.set(d.vivado_tcl_program)
     form.var_auto_delay.set(d.auto_delay)

@@ -73,6 +73,7 @@ class EventControllerVivadoTests(unittest.TestCase):
             var_vivado_bat_path=DummyVar(""),
             var_vivado_project_path=DummyVar(""),
             var_vivado_tcl_bitstream=DummyVar(""),
+            var_vivado_bitstream_generate_name=DummyVar(""),
             var_vivado_bitstream_program=DummyVar(""),
             var_vivado_tcl_program=DummyVar(""),
         )
@@ -136,6 +137,36 @@ class EventControllerVivadoTests(unittest.TestCase):
             self.assertTrue(any("exit code 0" in m for m in log.messages))
             self.assertEqual(vivado.btn_generate_bitstream.state, "normal")
             self.assertEqual(vivado.btn_program_device.state, "normal")
+            cfg = starter.call_args[0][0]
+            self.assertEqual(cfg.extra_tclargs, ())
+
+    def test_run_vivado_generate_bitstream_passes_name_as_second_tclarg(self) -> None:
+        controller, form, log, vivado = self._make_controller()
+        with TemporaryDirectory() as tmp:
+            bat = Path(tmp) / "vivado.bat"
+            xpr = Path(tmp) / "design.xpr"
+            tcl = Path(tmp) / "run.tcl"
+            bat.write_text("echo test\n", encoding="utf-8")
+            xpr.write_text("dummy\n", encoding="utf-8")
+            tcl.write_text("exit\n", encoding="utf-8")
+            form.var_vivado_bat_path.set(str(bat))
+            form.var_vivado_project_path.set(str(xpr))
+            form.var_vivado_tcl_bitstream.set(str(tcl))
+            form.var_vivado_bitstream_generate_name.set("my_bitstem")
+
+            fake_process = FakeProcess([], exit_code=0)
+            with patch(
+                "ui.controllers.event_controller.start_vivado_batch", return_value=fake_process
+            ) as starter, patch(
+                "ui.controllers.event_controller.threading.Thread", ImmediateThread
+            ), patch("ui.controllers.event_controller.messagebox.showerror") as showerror:
+                controller.run_vivado_generate_bitstream()
+
+            showerror.assert_not_called()
+            starter.assert_called_once()
+            cfg = starter.call_args[0][0]
+            self.assertEqual(cfg.extra_tclargs, ("my_bitstem",))
+            self.assertEqual(vivado.btn_generate_bitstream.state, "normal")
 
     def test_run_vivado_program_device_passes_bit_as_second_tclarg(self) -> None:
         controller, form, log, _ = self._make_controller()

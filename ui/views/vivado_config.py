@@ -62,6 +62,14 @@ def build_vivado_configuration(
     btn_generate_bitstream.grid(row=row, column=2, sticky="ew", padx=(8, 0), pady=4)
     row += 1
 
+    ttk.Label(parent, text="Bitstream output name (optional)").grid(
+        row=row, column=0, sticky="w", pady=4
+    )
+    ttk.Entry(parent, textvariable=form.var_vivado_bitstream_generate_name).grid(
+        row=row, column=1, columnspan=2, sticky="ew", pady=4
+    )
+    row += 1
+
     ttk.Label(parent, text="Bitstream to program (.bit)").grid(row=row, column=0, sticky="w", pady=4)
     bit_row = ttk.Frame(parent)
     bit_row.grid(row=row, column=1, columnspan=2, sticky="ew", pady=4)

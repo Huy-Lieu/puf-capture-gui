@@ -116,8 +116,12 @@ class EventController:
             self._form.var_vivado_bitstream_program.set(path)
 
     def run_vivado_generate_bitstream(self) -> None:
+        name = self._form.var_vivado_bitstream_generate_name.get().strip()
+        extra = (name,) if name else ()
         self._run_vivado_for_tcl(
-            self._form.var_vivado_tcl_bitstream.get().strip(), "GenerateBitstream"
+            self._form.var_vivado_tcl_bitstream.get().strip(),
+            "GenerateBitstream",
+            extra_tclargs=extra,
         )
 
     def run_vivado_program_device(self) -> None:

@@ -209,6 +209,7 @@ After **Connect**, the tool waits for **Capture** between steps (**manual pacing
 | **Vivado bat path** | e.g. `...\bin\vivado.bat` |
 | **Vivado project (.xpr)** | Passed in `-tclargs` (after the TCL script path in the built command) |
 | **Generate Bitstream TCL** | Your synthesis/implementation/bitgen script |
+| **Bitstream output name (optional)** | When non-empty, passed as a **second** `-tclargs` value after the `.xpr` path (same mechanism as programming’s extra arg). In Tcl use e.g. `[lindex $argv 0]` for the project and `[lindex $argv 1]` when `[llength $argv] > 1`; if the field is empty, only the project path is passed (backward compatible). |
 | **Generate Bitstream** | Runs batch Vivado with that TCL |
 | **Bitstream to program (.bit)** | Bitstream path for programming |
 | **Programming Device TCL** | Programming script; GUI adds the **.bit path** as extra `tclargs` after the `.xpr` |

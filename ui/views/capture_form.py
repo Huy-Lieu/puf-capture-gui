@@ -22,6 +22,7 @@ class CaptureForm:
     var_vivado_bat_path: tk.StringVar
     var_vivado_project_path: tk.StringVar
     var_vivado_tcl_bitstream: tk.StringVar
+    var_vivado_bitstream_generate_name: tk.StringVar
     var_vivado_bitstream_program: tk.StringVar
     var_vivado_tcl_program: tk.StringVar
     var_auto_delay: tk.StringVar
@@ -105,6 +106,7 @@ def build_capture_form(
     var_vivado_bat_path = tk.StringVar()
     var_vivado_project_path = tk.StringVar()
     var_vivado_tcl_bitstream = tk.StringVar()
+    var_vivado_bitstream_generate_name = tk.StringVar()
     var_vivado_bitstream_program = tk.StringVar()
     var_vivado_tcl_program = tk.StringVar()
     var_auto_delay = tk.StringVar()
@@ -321,6 +323,7 @@ def build_capture_form(
         var_vivado_bat_path=var_vivado_bat_path,
         var_vivado_project_path=var_vivado_project_path,
         var_vivado_tcl_bitstream=var_vivado_tcl_bitstream,
+        var_vivado_bitstream_generate_name=var_vivado_bitstream_generate_name,
         var_vivado_bitstream_program=var_vivado_bitstream_program,
         var_vivado_tcl_program=var_vivado_tcl_program,
         var_auto_delay=var_auto_delay,
