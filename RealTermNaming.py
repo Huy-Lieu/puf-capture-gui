@@ -59,13 +59,9 @@ def build_capture_filename(cfg: RealTermConfig, capture_index: int) -> str:
             f"{cfg.r1_pair_suffix}{cfg.extension}"
         )
     if cfg.file_naming_mode == "scheme3":
-        base_clean = cfg.base_name.strip().strip("_")
-        base_clean = re.sub(r"^FPGA\d+_?", "", base_clean, flags=re.IGNORECASE)
-        prefix = f"FPGA{cfg.fpga_index}_"
-        if base_clean:
-            prefix += f"{base_clean}_"
         return (
-            f"{prefix}MDIST{cfg.mdist_value}_M{cfg.mux_a}_M{cfg.mux_b}_"
+            f"FPGA{cfg.fpga_index}_"
+            f"MDIST{cfg.mdist_value}_M{cfg.mux_a}_M{cfg.mux_b}_"
             f"{cfg.ldist_lut_a}_{cfg.ldist_lut_b}_LDIST{cfg.ldist_distance}_"
             f"{cfg.flipflop_position}{cfg.extension}"
         )

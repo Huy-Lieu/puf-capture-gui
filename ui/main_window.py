@@ -130,7 +130,10 @@ def main() -> None:
         app.form.var_r1_pair_suffix,
         app.form.var_r1_loop_all_pairs,
     ):
-        var.trace_add("write", lambda *_: app.preview.update_filename_preview())
+        var.trace_add(
+            "write",
+            lambda *_: (app.preview.update_filename_preview(), app.preview.update_bitstream_name()),
+        )
     app.form.var_loop_ff_only.trace_add(
         "write", lambda *_: app.preview.apply_naming_mode_ui()
     )
@@ -141,6 +144,11 @@ def main() -> None:
         "write", lambda *_: app.preview.apply_naming_mode_ui()
     )
     app.form.var_mdist_value.trace_add(
-        "write", lambda *_: (app.preview.refresh_mdist_pairs(), app.preview.update_filename_preview())
+        "write",
+        lambda *_: (
+            app.preview.refresh_mdist_pairs(),
+            app.preview.update_filename_preview(),
+            app.preview.update_bitstream_name(),
+        ),
     )
     app.mainloop()

@@ -50,6 +50,8 @@ class CaptureForm:
     chk_loop_ldist_only: ttk.Checkbutton
     chk_r1_loop_all_pairs: ttk.Checkbutton
     cmb_com_port: ttk.Combobox
+    lbl_base_name: ttk.Label
+    entry_base_name: ttk.Entry
 
     def apply_naming_mode_ui(self) -> None:
         mode = self.var_file_naming_mode.get()
@@ -59,7 +61,7 @@ class CaptureForm:
         loop_mdist = bool(self.var_loop_mdist_only.get())
         loop_ldist = bool(self.var_loop_ldist_only.get())
 
-        if is_scheme4:
+        if is_scheme3 or is_scheme4:
             self.entry_start_index.configure(state=tk.DISABLED)
             self.entry_end_index.configure(state=tk.DISABLED)
             self.entry_end_fpga_index.configure(state=tk.NORMAL)
@@ -85,6 +87,12 @@ class CaptureForm:
         self.chk_loop_mdist_only.configure(state=tk.NORMAL if is_scheme3 else tk.DISABLED)
         self.chk_loop_ldist_only.configure(state=tk.NORMAL if is_scheme3 else tk.DISABLED)
         self.cmb_ldist_case.configure(state=ldist_state)
+        if is_scheme3:
+            self.lbl_base_name.grid_remove()
+            self.entry_base_name.grid_remove()
+        else:
+            self.lbl_base_name.grid()
+            self.entry_base_name.grid()
 
 
 def build_capture_form(
@@ -158,8 +166,10 @@ def build_capture_form(
     entry_end_fpga_index.grid(row=row, column=1, sticky="w", pady=4)
     row += 1
 
-    ttk.Label(parent, text="Base name template").grid(row=row, column=0, sticky="w", pady=4)
-    ttk.Entry(parent, textvariable=var_base_name).grid(row=row, column=1, sticky="ew", pady=4)
+    lbl_base_name = ttk.Label(parent, text="Base name template")
+    lbl_base_name.grid(row=row, column=0, sticky="w", pady=4)
+    entry_base_name = ttk.Entry(parent, textvariable=var_base_name)
+    entry_base_name.grid(row=row, column=1, sticky="ew", pady=4)
     row += 1
 
     ttk.Label(parent, text="Start index").grid(row=row, column=0, sticky="w", pady=4)
@@ -351,4 +361,6 @@ def build_capture_form(
         chk_loop_ldist_only=chk_loop_ldist_only,
         chk_r1_loop_all_pairs=chk_r1_loop_all_pairs,
         cmb_com_port=cmb_com_port,
+        lbl_base_name=lbl_base_name,
+        entry_base_name=entry_base_name,
     )

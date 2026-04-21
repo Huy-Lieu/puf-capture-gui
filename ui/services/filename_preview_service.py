@@ -10,6 +10,27 @@ from RealTermTypes import RealTermConfig
 from ui.services.naming_adapter import resolve_ldist_details, resolve_mdist_mux, safe_int
 
 
+def build_bitstream_name(
+    *,
+    flipflop_position: str,
+    mdist_value_raw: str,
+    mux_pair_raw: str,
+    ldist_case_raw: str,
+) -> str:
+    mdist_value, mux_a, mux_b = resolve_mdist_mux(
+        mdist_value_raw=mdist_value_raw,
+        mux_pair_raw=mux_pair_raw,
+        naming_mode="scheme3",
+        mdist_loop_fixed_mux=False,
+    )
+    _, ldist_lut_a, ldist_lut_b, ldist_distance = resolve_ldist_details(ldist_case_raw)
+    ff = (flipflop_position or "DFF").strip().upper() or "DFF"
+    return (
+        f"MDIST{mdist_value}_M{mux_a}_M{mux_b}_"
+        f"{ldist_lut_a}_{ldist_lut_b}_LDIST{ldist_distance}_{ff}"
+    )
+
+
 def build_preview_name(
     *,
     naming_mode: str,

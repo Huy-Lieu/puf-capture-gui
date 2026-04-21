@@ -11,6 +11,8 @@ from RealTermNaming import (
 )
 from RealTermTypes import RealTermConfig
 
+_FF_ORDER: tuple[str, ...] = ("DFF", "CFF", "BFF", "AFF")
+
 
 def iter_reliability_jobs(cfg: RealTermConfig) -> Iterator[tuple[str, RealTermConfig, int]]:
     total_fpga = cfg.end_fpga_index - cfg.fpga_index + 1
@@ -26,14 +28,27 @@ def iter_ff_mux_jobs(cfg: RealTermConfig) -> Iterator[tuple[str, RealTermConfig,
     if cfg.ldist_loop:
         ff_values = (cfg.flipflop_position,)
         mdist_steps = [(cfg.mdist_value, cfg.mux_a, cfg.mux_b)]
-        ldist_case_ids = get_ldist_case_ids_ordered()
+        all_ldist = get_ldist_case_ids_ordered()
+        ldist_start = next((i for i, cid in enumerate(all_ldist) if cid == cfg.ldist_case_id), 0)
+        ldist_case_ids = all_ldist[ldist_start:]
     else:
-        ff_values = ("DFF", "CFF", "BFF", "AFF") if cfg.ff_loop_fixed_mux else (cfg.flipflop_position,)
+        if cfg.ff_loop_fixed_mux:
+            ff_start = next((i for i, f in enumerate(_FF_ORDER) if f == cfg.flipflop_position), 0)
+            ff_values = _FF_ORDER[ff_start:]
+        else:
+            ff_values = (cfg.flipflop_position,)
         mdist_steps: list[tuple[int, int, int]] = []
         if cfg.mdist_loop_fixed_mux:
-            for mdist in sorted(MDIST_CASES.keys(), reverse=True):
-                for mux_a, mux_b in MDIST_CASES[mdist]:
-                    mdist_steps.append((mdist, mux_a, mux_b))
+            all_steps = [
+                (mdist, mux_a, mux_b)
+                for mdist in sorted(MDIST_CASES.keys(), reverse=True)
+                for mux_a, mux_b in MDIST_CASES[mdist]
+            ]
+            mdist_start = next(
+                (i for i, s in enumerate(all_steps) if s == (cfg.mdist_value, cfg.mux_a, cfg.mux_b)),
+                0,
+            )
+            mdist_steps = all_steps[mdist_start:]
         else:
             mdist_steps.append((cfg.mdist_value, cfg.mux_a, cfg.mux_b))
         ldist_case_ids = (cfg.ldist_case_id,)
@@ -64,9 +79,7 @@ def iter_ff_mux_jobs(cfg: RealTermConfig) -> Iterator[tuple[str, RealTermConfig,
                         f"-- MDIST{mdist_value} M{mux_a}-M{mux_b} "
                         f"-- {ldist_lut_a}-{ldist_lut_b} LDIST{ldist_distance} ---"
                     )
-                    for current_index in range(cfg.start_index, cfg.end_index + 1):
-                        yield heading, step_cfg, current_index
-                        heading = ""
+                    yield heading, step_cfg, 1
 
 
 def iter_r1_init_jobs(cfg: RealTermConfig) -> Iterator[tuple[str, RealTermConfig, int]]:
