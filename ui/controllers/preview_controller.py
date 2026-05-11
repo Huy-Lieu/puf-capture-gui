@@ -5,6 +5,20 @@ from ui.services.filename_preview_service import build_bitstream_name, build_pre
 from ui.views.capture_form import CaptureForm
 
 
+def effective_naming_mode(form) -> str:
+    """Return the underlying scheme id ('scheme1', 'scheme3', 'scheme4') driven by
+    the top-mode radio plus the Configurations sub-section checkboxes.
+
+    Works against any form-like object exposing var_top_mode / var_enable_ff_mux /
+    var_enable_init_values; duck-typed so unit tests can pass a SimpleNamespace.
+    """
+    if form.var_top_mode.get() == "reliability":
+        return "scheme1"
+    if bool(form.var_enable_init_values.get()):
+        return "scheme4"
+    return "scheme3"
+
+
 class PreviewController:
     def __init__(self, form: CaptureForm) -> None:
         self._form = form
@@ -26,12 +40,25 @@ class PreviewController:
         if self._form.var_mux_pair.get() not in labels:
             self._form.var_mux_pair.set(labels[0])
 
+    def _fpga_range_raw(self, mode: str) -> tuple[str, str]:
+        # In Configurations modes the FPGA ID drives a single-FPGA run; in Reliability
+        # we still expose the start/end range via the dedicated entries.
+        if mode == "scheme1":
+            return (
+                self._form.var_fpga_index.get(),
+                self._form.var_end_fpga_index.get(),
+            )
+        fpga_id = self._form.var_fpga_id.get()
+        return fpga_id, fpga_id
+
     def update_filename_preview(self) -> None:
         try:
+            mode = effective_naming_mode(self._form)
+            fpga_start_raw, fpga_end_raw = self._fpga_range_raw(mode)
             preview = build_preview_name(
-                naming_mode=self._form.var_file_naming_mode.get(),
-                fpga_index_raw=self._form.var_fpga_index.get(),
-                end_fpga_index_raw=self._form.var_end_fpga_index.get(),
+                naming_mode=mode,
+                fpga_index_raw=fpga_start_raw,
+                end_fpga_index_raw=fpga_end_raw,
                 start_index_raw=self._form.var_start_index.get(),
                 end_index_raw=self._form.var_end_index.get(),
                 base_name=self._form.var_base_name.get(),
@@ -50,7 +77,7 @@ class PreviewController:
             self._form.var_filename_preview.set(f"(invalid naming input: {exc})")
 
     def update_bitstream_name(self) -> None:
-        if self._form.var_file_naming_mode.get() != "scheme3":
+        if effective_naming_mode(self._form) != "scheme3":
             return
         try:
             name = build_bitstream_name(

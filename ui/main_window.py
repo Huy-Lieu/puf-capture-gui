@@ -117,9 +117,9 @@ class RealTermControllerApp(tk.Tk):
 def main() -> None:
     app = RealTermControllerApp()
 
-    app.form.var_fpga_index.trace_add("write", lambda *_: app.preview.update_filename_preview())
     for var in (
-        app.form.var_file_naming_mode,
+        app.form.var_fpga_id,
+        app.form.var_fpga_index,
         app.form.var_end_fpga_index,
         app.form.var_base_name,
         app.form.var_start_index,
@@ -134,15 +134,17 @@ def main() -> None:
             "write",
             lambda *_: (app.preview.update_filename_preview(), app.preview.update_bitstream_name()),
         )
-    app.form.var_loop_ff_only.trace_add(
-        "write", lambda *_: app.preview.apply_naming_mode_ui()
-    )
-    app.form.var_loop_mdist_only.trace_add(
-        "write", lambda *_: app.preview.apply_naming_mode_ui()
-    )
-    app.form.var_loop_ldist_only.trace_add(
-        "write", lambda *_: app.preview.apply_naming_mode_ui()
-    )
+    # Top mode + sub-section toggles change which controls are shown/enabled and which
+    # naming scheme is active, so they go through the full UI refresh path.
+    for var in (
+        app.form.var_top_mode,
+        app.form.var_enable_ff_mux,
+        app.form.var_enable_init_values,
+        app.form.var_loop_ff_only,
+        app.form.var_loop_mdist_only,
+        app.form.var_loop_ldist_only,
+    ):
+        var.trace_add("write", lambda *_: app.preview.apply_naming_mode_ui())
     app.form.var_mdist_value.trace_add(
         "write",
         lambda *_: (

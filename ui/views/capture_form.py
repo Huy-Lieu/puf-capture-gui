@@ -14,6 +14,10 @@ class CaptureForm:
     var_start_index: tk.StringVar
     var_end_index: tk.StringVar
     var_file_naming_mode: tk.StringVar
+    var_top_mode: tk.StringVar
+    var_enable_ff_mux: tk.BooleanVar
+    var_enable_init_values: tk.BooleanVar
+    var_fpga_id: tk.StringVar
     var_fpga_index: tk.StringVar
     var_end_fpga_index: tk.StringVar
     var_com_port: tk.StringVar
@@ -36,10 +40,16 @@ class CaptureForm:
     var_ldist_case: tk.StringVar
     var_r1_pair_suffix: tk.StringVar
     var_r1_loop_all_pairs: tk.BooleanVar
+    entry_fpga_id: ttk.Entry
+    lbl_fpga_id: ttk.Label
     entry_fpga_index: ttk.Entry
+    lbl_fpga_index: ttk.Label
     entry_end_fpga_index: ttk.Entry
+    lbl_end_fpga_index: ttk.Label
     entry_start_index: ttk.Entry
     entry_end_index: ttk.Entry
+    chk_enable_ff_mux: ttk.Checkbutton
+    chk_enable_init_values: ttk.Checkbutton
     cmb_flipflop_position: ttk.Combobox
     cmb_mdist_value: ttk.Combobox
     cmb_mux_pair: ttk.Combobox
@@ -53,29 +63,60 @@ class CaptureForm:
     lbl_base_name: ttk.Label
     entry_base_name: ttk.Entry
 
+    def effective_naming_mode(self) -> str:
+        if self.var_top_mode.get() == "reliability":
+            return "scheme1"
+        if bool(self.var_enable_init_values.get()):
+            return "scheme4"
+        return "scheme3"
+
     def apply_naming_mode_ui(self) -> None:
-        mode = self.var_file_naming_mode.get()
+        top = self.var_top_mode.get()
+        is_reliability = top == "reliability"
+        is_configurations = not is_reliability
+
+        mode = self.effective_naming_mode()
+        if self.var_file_naming_mode.get() != mode:
+            self.var_file_naming_mode.set(mode)
+
         is_scheme3 = mode == "scheme3"
         is_scheme4 = mode == "scheme4"
         loop_ff = bool(self.var_loop_ff_only.get())
         loop_mdist = bool(self.var_loop_mdist_only.get())
         loop_ldist = bool(self.var_loop_ldist_only.get())
 
-        if is_scheme3 or is_scheme4:
-            self.entry_start_index.configure(state=tk.DISABLED)
-            self.entry_end_index.configure(state=tk.DISABLED)
-            self.entry_end_fpga_index.configure(state=tk.NORMAL)
-            self.chk_r1_loop_all_pairs.configure(state=tk.NORMAL)
-            if bool(self.var_r1_loop_all_pairs.get()):
-                self.cmb_r1_pair.configure(state=tk.DISABLED)
-            else:
-                self.cmb_r1_pair.configure(state="readonly")
+        if is_reliability:
+            self.lbl_fpga_index.grid()
+            self.entry_fpga_index.grid()
+            self.lbl_end_fpga_index.grid()
+            self.entry_end_fpga_index.grid()
+            self.lbl_fpga_id.grid_remove()
+            self.entry_fpga_id.grid_remove()
         else:
+            self.lbl_fpga_index.grid_remove()
+            self.entry_fpga_index.grid_remove()
+            self.lbl_end_fpga_index.grid_remove()
+            self.entry_end_fpga_index.grid_remove()
+            self.lbl_fpga_id.grid()
+            self.entry_fpga_id.grid()
+
+        if is_configurations:
+            self.chk_enable_ff_mux.grid()
+            self.chk_enable_init_values.grid()
+        else:
+            self.chk_enable_ff_mux.grid_remove()
+            self.chk_enable_init_values.grid_remove()
+
+        if is_reliability:
             self.entry_start_index.configure(state=tk.NORMAL)
             self.entry_end_index.configure(state=tk.NORMAL)
-            self.entry_end_fpga_index.configure(state=tk.NORMAL)
-            self.cmb_r1_pair.configure(state=tk.DISABLED)
-            self.chk_r1_loop_all_pairs.configure(state=tk.DISABLED)
+            self.lbl_base_name.grid()
+            self.entry_base_name.grid()
+        else:
+            self.entry_start_index.configure(state=tk.DISABLED)
+            self.entry_end_index.configure(state=tk.DISABLED)
+            self.lbl_base_name.grid_remove()
+            self.entry_base_name.grid_remove()
 
         mdist_state = "readonly" if (is_scheme3 and not loop_mdist) else tk.DISABLED
         ff_state = "readonly" if (is_scheme3 and not loop_ff) else tk.DISABLED
@@ -87,12 +128,16 @@ class CaptureForm:
         self.chk_loop_mdist_only.configure(state=tk.NORMAL if is_scheme3 else tk.DISABLED)
         self.chk_loop_ldist_only.configure(state=tk.NORMAL if is_scheme3 else tk.DISABLED)
         self.cmb_ldist_case.configure(state=ldist_state)
-        if is_scheme3:
-            self.lbl_base_name.grid_remove()
-            self.entry_base_name.grid_remove()
+
+        if is_scheme4:
+            self.chk_r1_loop_all_pairs.configure(state=tk.NORMAL)
+            if bool(self.var_r1_loop_all_pairs.get()):
+                self.cmb_r1_pair.configure(state=tk.DISABLED)
+            else:
+                self.cmb_r1_pair.configure(state="readonly")
         else:
-            self.lbl_base_name.grid()
-            self.entry_base_name.grid()
+            self.cmb_r1_pair.configure(state=tk.DISABLED)
+            self.chk_r1_loop_all_pairs.configure(state=tk.DISABLED)
 
 
 def build_capture_form(
@@ -106,6 +151,10 @@ def build_capture_form(
     var_start_index = tk.StringVar()
     var_end_index = tk.StringVar()
     var_file_naming_mode = tk.StringVar(value="scheme1")
+    var_top_mode = tk.StringVar(value="reliability")
+    var_enable_ff_mux = tk.BooleanVar(value=True)
+    var_enable_init_values = tk.BooleanVar(value=False)
+    var_fpga_id = tk.StringVar()
     var_fpga_index = tk.StringVar()
     var_end_fpga_index = tk.StringVar()
     var_com_port = tk.StringVar()
@@ -129,6 +178,18 @@ def build_capture_form(
     var_r1_pair_suffix = tk.StringVar(value=R1_INIT_PAIR_SUFFIXES[0])
     var_r1_loop_all_pairs = tk.BooleanVar(value=False)
 
+    def _on_ff_mux_toggled() -> None:
+        # Mutex: turning FF & MUX on forces Initial Values off.
+        if bool(var_enable_ff_mux.get()):
+            var_enable_init_values.set(False)
+        on_naming_mode_changed()
+
+    def _on_init_values_toggled() -> None:
+        # Mutex: turning Initial Values on forces FF & MUX off.
+        if bool(var_enable_init_values.get()):
+            var_enable_ff_mux.set(False)
+        on_naming_mode_changed()
+
     row = 0
     ttk.Label(parent, text="Name mode").grid(row=row, column=0, sticky="w", pady=4)
     naming_row = ttk.Frame(parent)
@@ -136,32 +197,55 @@ def build_capture_form(
     ttk.Radiobutton(
         naming_row,
         text="Reliability (N captures)",
-        variable=var_file_naming_mode,
-        value="scheme1",
+        variable=var_top_mode,
+        value="reliability",
         command=on_naming_mode_changed,
     ).grid(row=0, column=0, padx=(0, 8))
     ttk.Radiobutton(
         naming_row,
-        text="FF & MUX",
-        variable=var_file_naming_mode,
-        value="scheme3",
+        text="Configurations",
+        variable=var_top_mode,
+        value="configurations",
         command=on_naming_mode_changed,
-    ).grid(row=0, column=1, padx=(8, 8))
-    ttk.Radiobutton(
-        naming_row,
-        text="Initial Values",
-        variable=var_file_naming_mode,
-        value="scheme4",
-        command=on_naming_mode_changed,
-    ).grid(row=0, column=2, padx=(8, 0))
+    ).grid(row=0, column=1, padx=(8, 0))
     row += 1
 
-    ttk.Label(parent, text="FPGA index").grid(row=row, column=0, sticky="w", pady=4)
+    sub_row_frame = ttk.Frame(parent)
+    sub_row_frame.grid(row=row, column=1, sticky="w", pady=4)
+    chk_enable_ff_mux = ttk.Checkbutton(
+        sub_row_frame,
+        text="Enable FF & MUX",
+        variable=var_enable_ff_mux,
+        onvalue=True,
+        offvalue=False,
+        command=_on_ff_mux_toggled,
+    )
+    chk_enable_ff_mux.grid(row=0, column=0, padx=(0, 12), sticky="w")
+    chk_enable_init_values = ttk.Checkbutton(
+        sub_row_frame,
+        text="Enable Initial Values",
+        variable=var_enable_init_values,
+        onvalue=True,
+        offvalue=False,
+        command=_on_init_values_toggled,
+    )
+    chk_enable_init_values.grid(row=0, column=1, sticky="w")
+    row += 1
+
+    lbl_fpga_id = ttk.Label(parent, text="FPGA ID")
+    lbl_fpga_id.grid(row=row, column=0, sticky="w", pady=4)
+    entry_fpga_id = ttk.Entry(parent, textvariable=var_fpga_id, width=12)
+    entry_fpga_id.grid(row=row, column=1, sticky="w", pady=4)
+    row += 1
+
+    lbl_fpga_index = ttk.Label(parent, text="FPGA index")
+    lbl_fpga_index.grid(row=row, column=0, sticky="w", pady=4)
     entry_fpga_index = ttk.Entry(parent, textvariable=var_fpga_index, width=12)
     entry_fpga_index.grid(row=row, column=1, sticky="w", pady=4)
     row += 1
 
-    ttk.Label(parent, text="End FPGA index").grid(row=row, column=0, sticky="w", pady=4)
+    lbl_end_fpga_index = ttk.Label(parent, text="End FPGA index")
+    lbl_end_fpga_index.grid(row=row, column=0, sticky="w", pady=4)
     entry_end_fpga_index = ttk.Entry(parent, textvariable=var_end_fpga_index, width=12)
     entry_end_fpga_index.grid(row=row, column=1, sticky="w", pady=4)
     row += 1
@@ -325,6 +409,10 @@ def build_capture_form(
         var_start_index=var_start_index,
         var_end_index=var_end_index,
         var_file_naming_mode=var_file_naming_mode,
+        var_top_mode=var_top_mode,
+        var_enable_ff_mux=var_enable_ff_mux,
+        var_enable_init_values=var_enable_init_values,
+        var_fpga_id=var_fpga_id,
         var_fpga_index=var_fpga_index,
         var_end_fpga_index=var_end_fpga_index,
         var_com_port=var_com_port,
@@ -347,10 +435,16 @@ def build_capture_form(
         var_ldist_case=var_ldist_case,
         var_r1_pair_suffix=var_r1_pair_suffix,
         var_r1_loop_all_pairs=var_r1_loop_all_pairs,
+        entry_fpga_id=entry_fpga_id,
+        lbl_fpga_id=lbl_fpga_id,
         entry_fpga_index=entry_fpga_index,
+        lbl_fpga_index=lbl_fpga_index,
         entry_end_fpga_index=entry_end_fpga_index,
+        lbl_end_fpga_index=lbl_end_fpga_index,
         entry_start_index=entry_start_index,
         entry_end_index=entry_end_index,
+        chk_enable_ff_mux=chk_enable_ff_mux,
+        chk_enable_init_values=chk_enable_init_values,
         cmb_flipflop_position=cmb_flipflop_position,
         cmb_mdist_value=cmb_mdist_value,
         cmb_mux_pair=cmb_mux_pair,

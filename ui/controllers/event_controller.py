@@ -5,6 +5,7 @@ import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
+from ui.controllers.preview_controller import effective_naming_mode
 from ui.services.config_mapper import parse_realterm_config
 from ui.services.port_service import detect_com_ports
 from ui.services.vivado_runner import VivadoRunConfig, start_vivado_batch
@@ -272,11 +273,33 @@ class EventController:
             self._form.var_com_port.set(ports[0])
 
     def read_config(self):
+        top_mode = self._form.var_top_mode.get()
+        if top_mode != "reliability":
+            ff_mux_on = bool(self._form.var_enable_ff_mux.get())
+            init_values_on = bool(self._form.var_enable_init_values.get())
+            if not ff_mux_on and not init_values_on:
+                raise ValueError(
+                    "Enable either 'FF & MUX' or 'Initial Values' in Configurations."
+                )
+            if ff_mux_on and init_values_on:
+                raise ValueError(
+                    "Enable only one of 'FF & MUX' or 'Initial Values' in Configurations."
+                )
+
+        naming_mode = effective_naming_mode(self._form)
+        if naming_mode == "scheme1":
+            fpga_start_raw = self._form.var_fpga_index.get()
+            fpga_end_raw = self._form.var_end_fpga_index.get()
+        else:
+            fpga_id_raw = self._form.var_fpga_id.get()
+            fpga_start_raw = fpga_id_raw
+            fpga_end_raw = fpga_id_raw
+
         return parse_realterm_config(
             base_name=self._form.var_base_name.get(),
-            naming_mode=self._form.var_file_naming_mode.get(),
-            fpga_index_raw=self._form.var_fpga_index.get(),
-            end_fpga_index_raw=self._form.var_end_fpga_index.get(),
+            naming_mode=naming_mode,
+            fpga_index_raw=fpga_start_raw,
+            end_fpga_index_raw=fpga_end_raw,
             start_index_raw=self._form.var_start_index.get(),
             end_index_raw=self._form.var_end_index.get(),
             com_port_raw=self._form.var_com_port.get(),

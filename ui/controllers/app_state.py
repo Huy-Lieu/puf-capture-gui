@@ -9,7 +9,10 @@ from ui.views.capture_form import CaptureForm
 @dataclass(frozen=True)
 class AppDefaults:
     base_name: str = ""
-    naming_mode: str = "scheme1"
+    top_mode: str = "reliability"
+    enable_ff_mux: bool = True
+    enable_init_values: bool = False
+    fpga_id: str = "7"
     fpga_index: str = "7"
     end_fpga_index: str = "7"
     start_index: str = "1"
@@ -37,7 +40,10 @@ class AppDefaults:
 def apply_defaults(form: CaptureForm, defaults: AppDefaults | None = None) -> None:
     d = defaults or AppDefaults()
     form.var_base_name.set(d.base_name)
-    form.var_file_naming_mode.set(d.naming_mode)
+    form.var_top_mode.set(d.top_mode)
+    form.var_enable_ff_mux.set(d.enable_ff_mux)
+    form.var_enable_init_values.set(d.enable_init_values)
+    form.var_fpga_id.set(d.fpga_id)
     form.var_fpga_index.set(d.fpga_index)
     form.var_end_fpga_index.set(d.end_fpga_index)
     form.var_start_index.set(d.start_index)
@@ -61,3 +67,6 @@ def apply_defaults(form: CaptureForm, defaults: AppDefaults | None = None) -> No
     form.var_loop_ldist_only.set(d.loop_ldist_only)
     form.var_r1_pair_suffix.set(R1_INIT_PAIR_SUFFIXES[0])
 
+    # Keep the computed file naming mode synchronized with the top-mode / sub-section selection
+    # so downstream callers reading var_file_naming_mode see a consistent default.
+    form.var_file_naming_mode.set(form.effective_naming_mode())
